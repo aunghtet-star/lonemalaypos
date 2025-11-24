@@ -1,0 +1,93 @@
+import { MenuItem, Ingredient, Voucher, Order } from './types';
+
+// Scaled costs to Kyat (approx x1000 for demo realism)
+export const INITIAL_INGREDIENTS: Ingredient[] = [
+  { id: 'i1', name: 'Burger Bun', unit: 'pcs', stock: 100, minStockLevel: 20, costPerUnit: 500 },
+  { id: 'i2', name: 'Beef Patty', unit: 'pcs', stock: 80, minStockLevel: 20, costPerUnit: 1500 },
+  { id: 'i3', name: 'Cheese Slice', unit: 'pcs', stock: 200, minStockLevel: 50, costPerUnit: 200 },
+  { id: 'i4', name: 'Lettuce', unit: 'g', stock: 5000, minStockLevel: 1000, costPerUnit: 10 },
+  { id: 'i5', name: 'Coffee Beans', unit: 'g', stock: 2000, minStockLevel: 500, costPerUnit: 50 },
+  { id: 'i6', name: 'Milk', unit: 'ml', stock: 10000, minStockLevel: 2000, costPerUnit: 2 },
+];
+
+export const INITIAL_MENU: MenuItem[] = [
+  {
+    id: 'm1',
+    name: 'Classic Cheeseburger',
+    category: 'Food',
+    price: 9000,
+    cost: 3500,
+    image: 'https://picsum.photos/200/200?random=1',
+    description: 'Juicy beef patty with cheddar cheese.',
+    ingredients: [
+      { ingredientId: 'i1', quantity: 1 },
+      { ingredientId: 'i2', quantity: 1 },
+      { ingredientId: 'i3', quantity: 1 },
+      { ingredientId: 'i4', quantity: 20 }
+    ]
+  },
+  {
+    id: 'm2',
+    name: 'Double Bacon Burger',
+    category: 'Food',
+    price: 13000,
+    cost: 5500,
+    image: 'https://picsum.photos/200/200?random=2',
+    description: 'Double patty, crispy bacon.',
+    ingredients: [
+      { ingredientId: 'i1', quantity: 1 },
+      { ingredientId: 'i2', quantity: 2 },
+      { ingredientId: 'i3', quantity: 2 }
+    ]
+  },
+  {
+    id: 'm3',
+    name: 'Latte',
+    category: 'Drinks',
+    price: 4500,
+    cost: 1200,
+    image: 'https://picsum.photos/200/200?random=3',
+    description: 'Steamed milk with espresso.',
+    ingredients: [
+      { ingredientId: 'i5', quantity: 18 },
+      { ingredientId: 'i6', quantity: 200 }
+    ]
+  },
+  {
+    id: 'm4',
+    name: 'Cappuccino',
+    category: 'Drinks',
+    price: 4500,
+    cost: 1200,
+    image: 'https://picsum.photos/200/200?random=4',
+    description: 'Espresso with frothy milk.',
+    ingredients: [
+      { ingredientId: 'i5', quantity: 18 },
+      { ingredientId: 'i6', quantity: 150 }
+    ]
+  },
+  {
+    id: 'm5',
+    name: 'Caesar Salad',
+    category: 'Food',
+    price: 9500,
+    cost: 2500,
+    image: 'https://picsum.photos/200/200?random=5',
+    description: 'Fresh romaine with croutons.',
+    ingredients: [
+      { ingredientId: 'i4', quantity: 150 }
+    ]
+  }
+];
+
+export const INITIAL_VOUCHERS: Voucher[] = [
+  { id: 'v1', code: 'WELCOME10', type: 'PERCENTAGE', value: 10, minSpend: 0, expiryDate: '2025-12-31', isActive: true },
+  { id: 'v2', code: 'LUNCH5000', type: 'FIXED', value: 5000, minSpend: 20000, expiryDate: '2025-12-31', isActive: true },
+];
+
+export const INITIAL_ORDERS: Order[] = [
+  // Mock history for charts (Values scaled to Kyat)
+  { id: 'o1', items: [], subtotal: 50000, tax: 0, discount: 0, total: 50000, paymentMethod: 'CASH', status: 'COMPLETED', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), cashierName: 'John Doe' },
+  { id: 'o2', items: [], subtotal: 120000, tax: 0, discount: 10000, total: 110000, paymentMethod: 'CASH', status: 'COMPLETED', createdAt: new Date(Date.now() - 86400000).toISOString(), cashierName: 'John Doe' },
+  { id: 'o3', items: [], subtotal: 80000, tax: 0, discount: 0, total: 80000, paymentMethod: 'KBZ_PAY', status: 'COMPLETED', createdAt: new Date().toISOString(), cashierName: 'Jane Smith' },
+];

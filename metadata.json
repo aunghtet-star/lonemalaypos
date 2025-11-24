@@ -1,0 +1,8 @@
+{
+  "name": "လုံမလေး",
+  "description": "A comprehensive Point of Sale system with AI-driven business intelligence, inventory tracking, and dynamic reporting.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
