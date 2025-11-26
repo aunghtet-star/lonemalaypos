@@ -1,13 +1,61 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Order } from '../types';
+import { Order, MenuItem } from '../types';
+import { fetchOrdersWithItems } from '../services/supabaseClient';
 
 interface DashboardProps {
-  orders: Order[];
+  orders: Order[]; // Keep as fallback
+  menu: MenuItem[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ orders }) => {
+const Dashboard: React.FC<DashboardProps> = ({ orders, menu }) => {
   const [filterType, setFilterType] = useState<'today' | 'week' | 'month' | 'all' | 'custom'>('today');
+  const [dbOrders, setDbOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch orders from database on component mount
+  useEffect(() => {
+    const loadOrdersFromDatabase = async () => {
+      setLoading(true);
+      try {
+        const remoteOrders = await fetchOrdersWithItems(1000); // Fetch last 1000 orders for dashboard
+        const formattedOrders: Order[] = remoteOrders.map((o: any) => ({
+          id: o.id,
+          items: (o.items || []).map((item: any) => {
+            // Find the menu item to get category
+            const menuItem = menu.find(m => m.id === item.menu_item_id);
+            return {
+              id: item.menu_item_id,
+              name: '', // Dashboard doesn't need names for calculations
+              category: menuItem?.category || 'Unknown',
+              price: item.price_each,
+              cost: 0,
+              image: '',
+              quantity: item.quantity,
+              ingredients: []
+            };
+          }),
+          subtotal: o.subtotal,
+          tax: o.tax,
+          discount: o.discount,
+          total: o.total,
+          paymentMethod: o.payment_method,
+          status: o.status,
+          createdAt: o.created_at,
+          cashierName: o.cashier_name
+        }));
+        setDbOrders(formattedOrders);
+      } catch (error) {
+        console.error('Failed to load orders from database:', error);
+        // Fall back to local orders if database fails
+        setDbOrders(orders);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrdersFromDatabase();
+  }, [orders]);
 
   // Helper to get date ranges
   const getDateRange = (type: typeof filterType) => {
@@ -42,11 +90,11 @@ const Dashboard: React.FC<DashboardProps> = ({ orders }) => {
   };
 
   const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
+    return dbOrders.filter(o => {
       const orderDate = new Date(o.createdAt).toISOString().split('T')[0];
       return orderDate >= dateRange.start && orderDate <= dateRange.end;
     });
-  }, [orders, dateRange]);
+  }, [dbOrders, dateRange]);
 
   // Aggregate sales by date based on filtered orders
   const salesData = useMemo(() => {

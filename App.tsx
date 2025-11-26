@@ -326,7 +326,7 @@ const App: React.FC = () => {
           />
         </>
       )}
-      {activeTab === 'dashboard' && <Dashboard orders={orders} />}
+      {activeTab === 'dashboard' && <Dashboard orders={orders} menu={menu} />}
       {activeTab === 'menu' && <MenuManager menu={menu} setMenu={setMenu} inventory={inventory} />}
       {activeTab === 'inventory' && (
         <Inventory
