@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase, fetchMenuWithIngredients, fetchInventory, fetchOrders } from '../services/supabaseClient';
+import { supabase, fetchMenuWithIngredients, fetchInventory, fetchOrdersWithItems, migrateLocalOrdersToDatabase } from '../services/supabaseClient';
 import { MenuItem, Ingredient, Order } from '../types';
 import { INITIAL_MENU, INITIAL_INGREDIENTS, INITIAL_ORDERS } from '../constants';
 
@@ -48,7 +48,7 @@ function startBackgroundSyncIfEnabled() {
       const [menuRes, inventoryRes, ordersRes] = await Promise.all([
         fetchMenuWithIngredients(),
         fetchInventory(),
-        fetchOrders()
+        fetchOrdersWithItems()
       ]);
 
       const remoteMenu: MenuItem[] = (menuRes.menu || []).map((m: any) => ({
@@ -75,7 +75,16 @@ function startBackgroundSyncIfEnabled() {
 
       const remoteOrders: Order[] = (ordersRes || []).map((o: any) => ({
         id: o.id,
-        items: [], // We'll need to fetch order items separately
+        items: (o.items || []).map((item: any) => ({
+          id: item.menu_item_id,
+          name: '', // We'll need to populate this from menu data
+          category: '',
+          price: item.price_each,
+          cost: 0,
+          image: '',
+          quantity: item.quantity,
+          ingredients: []
+        })),
         subtotal: o.subtotal,
         tax: o.tax,
         discount: o.discount,
@@ -187,7 +196,7 @@ const SupabaseSync: React.FC<SupabaseSyncProps> = ({ onLoad }) => {
         const [menuRes, inventoryRes, ordersRes] = await Promise.all([
           fetchMenuWithIngredients(),
           fetchInventory(),
-          fetchOrders()
+          fetchOrdersWithItems()
         ]);
 
         clearTimeout(timeoutId);
@@ -219,7 +228,16 @@ const SupabaseSync: React.FC<SupabaseSyncProps> = ({ onLoad }) => {
 
         const remoteOrders: Order[] = (ordersRes || []).map((o: any) => ({
           id: o.id,
-          items: [], // We'll need to fetch order items separately
+          items: (o.items || []).map((item: any) => ({
+            id: item.menu_item_id,
+            name: '', // We'll need to populate this from menu data
+            category: '',
+            price: item.price_each,
+            cost: 0,
+            image: '',
+            quantity: item.quantity,
+            ingredients: []
+          })),
           subtotal: o.subtotal,
           tax: o.tax,
           discount: o.discount,
@@ -229,6 +247,17 @@ const SupabaseSync: React.FC<SupabaseSyncProps> = ({ onLoad }) => {
           createdAt: o.created_at,
           cashierName: o.cashier_name
         }));
+
+        // Check for local orders to migrate
+        const localOrders = loadLocal<Order[]>('pos_db_orders') || [];
+        if (localOrders.length > 0) {
+          setProgress(75);
+          setLoadingMessage('Migrating local orders...');
+          await migrateLocalOrdersToDatabase(localOrders);
+          // Clear local orders after migration
+          localStorage.removeItem('pos_db_orders');
+          console.log('✅ Local orders migrated to database');
+        }
 
         // Cache for next time
         localStorage.setItem(LOCAL_KEYS.MENU, JSON.stringify(remoteMenu));

@@ -339,7 +339,7 @@ const App: React.FC = () => {
         />
       )}
       {/* Align with Layout menu item id 'history' */}
-      {activeTab === 'history' && <OrderHistory orders={orders} />}
+      {activeTab === 'history' && <OrderHistory orders={orders} menu={menu} />}
     </Layout>
   );
 };

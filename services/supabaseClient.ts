@@ -217,6 +217,34 @@ export async function fetchOrderWithItems(orderId: string) {
   return { order: order as DbOrder, items: items as DbOrderItemRef[] };
 }
 
+export async function fetchOrdersWithItems(limit = 100) {
+  const { data: orders, error: ordersError } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (ordersError) throw ordersError;
+
+  const ordersWithItems = await Promise.all(
+    orders.map(async (order) => {
+      const { data: items, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', order.id);
+
+      if (itemsError) throw itemsError;
+
+      return {
+        ...order,
+        items: items || []
+      };
+    })
+  );
+
+  return ordersWithItems;
+}
+
 // Test connection
 export async function testConnection() {
   if (!supabase) {
@@ -232,4 +260,60 @@ export async function testConnection() {
   } catch (error: any) {
     return { success: false, message: error.message };
   }
+}
+
+// Migration function to move local orders from localStorage to Supabase database
+export async function migrateLocalOrdersToDatabase(localOrders: Order[]) {
+  if (!supabase) {
+    console.warn('Supabase not initialized. Cannot migrate orders.');
+    return;
+  }
+
+  console.log(`🔄 Migrating ${localOrders.length} local orders to database...`);
+
+  let migratedCount = 0;
+  let skippedCount = 0;
+
+  for (const order of localOrders) {
+    try {
+      // Check if order already exists in database (by ID)
+      const { data: existingOrder } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('id', order.id)
+        .single();
+
+      if (existingOrder) {
+        console.log(`⏭️ Order ${order.id} already exists in database, skipping`);
+        skippedCount++;
+        continue;
+      }
+
+      // Convert local order format to database format
+      const dbOrder = {
+        subtotal: order.subtotal,
+        tax: order.tax,
+        discount: order.discount,
+        total: order.total,
+        payment_method: order.paymentMethod,
+        status: order.status,
+        cashier_name: order.cashierName
+      };
+
+      const orderItems = order.items.map(item => ({
+        menu_item_id: item.id,
+        quantity: item.quantity,
+        price_each: item.price
+      }));
+
+      await createOrder(dbOrder, orderItems);
+      migratedCount++;
+      console.log(`✅ Migrated order ${order.id}`);
+    } catch (error) {
+      console.error(`❌ Failed to migrate order ${order.id}:`, error);
+    }
+  }
+
+  console.log(`🎉 Migration complete: ${migratedCount} migrated, ${skippedCount} skipped`);
+  return { migratedCount, skippedCount };
 }

@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Order } from '../types';
-import { fetchOrders } from '../services/supabaseClient';
+import { Order, MenuItem } from '../types';
+import { fetchOrdersWithItems } from '../services/supabaseClient';
 
 interface OrderHistoryProps {
   orders: Order[];
+  menu: MenuItem[];
 }
 
-const OrderHistory: React.FC<OrderHistoryProps> = ({ orders }) => {
+const OrderHistory: React.FC<OrderHistoryProps> = ({ orders, menu }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [dbOrders, setDbOrders] = useState<Order[]>([]);
@@ -19,10 +20,25 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({ orders }) => {
     const loadOrdersFromDatabase = async () => {
       setLoading(true);
       try {
-        const remoteOrders = await fetchOrders(100); // Fetch last 100 orders
+        const remoteOrders = await fetchOrdersWithItems(100); // Fetch last 100 orders with items
         const formattedOrders: Order[] = remoteOrders.map((o: any) => ({
           id: o.id,
-          items: [], // We'll need to fetch order items separately if needed
+          items: (o.items || []).map((item: any) => {
+            // Find the menu item to get name and category
+            const menuItem = menu.find(m => m.id === item.menu_item_id);
+            return {
+              id: item.menu_item_id,
+              name: menuItem?.name || 'Unknown Item',
+              category: menuItem?.category || 'Unknown',
+              price: item.price_each,
+              cost: menuItem?.cost || 0,
+              image: menuItem?.image || '',
+              quantity: item.quantity,
+              ingredients: menuItem?.ingredients || [],
+              isReadyMade: menuItem?.isReadyMade || false,
+              readyMadeStockId: menuItem?.readyMadeStockId || undefined
+            };
+          }),
           subtotal: o.subtotal,
           tax: o.tax,
           discount: o.discount,
