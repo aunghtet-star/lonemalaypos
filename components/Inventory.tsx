@@ -76,20 +76,28 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
 
           setSuccess(`Successfully added ${amount} ${selectedIngredient.unit} to ${selectedIngredient.name}`);
 
-          // Refresh data from backend
+          // Refresh data from backend - wait for it to complete
           if (onRefresh) {
-            setTimeout(() => onRefresh(), 500);
+            await onRefresh();
           }
+
+          // Close modal after short delay to show success message
+          setTimeout(() => {
+            handleCloseStockModal();
+            setSuccess(null);
+            setLoading(false);
+          }, 1500);
+        } else {
+          // Update local state if no database
+          onUpdateStock(selectedIngredient.id, amount);
+          setSuccess(`Successfully added ${amount} ${selectedIngredient.unit} to ${selectedIngredient.name}`);
+
+          setTimeout(() => {
+            handleCloseStockModal();
+            setSuccess(null);
+            setLoading(false);
+          }, 1500);
         }
-
-        // Update local state
-        onUpdateStock(selectedIngredient.id, amount);
-
-        // Close modal after short delay to show success message
-        setTimeout(() => {
-          handleCloseStockModal();
-          setSuccess(null);
-        }, 1500);
       } catch (err: any) {
         console.error('Error updating stock:', err);
         setError(err.message || 'Failed to update stock. Please try again.');
@@ -156,12 +164,18 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
 
           setSuccess(`Successfully updated "${ingredientFormData.name}"`);
 
-          // Refresh data from backend
+          // Refresh data from backend - wait for it to complete
           if (onRefresh) {
-            setTimeout(() => onRefresh(), 500);
+            await onRefresh();
           }
 
-          // Also update local state if callback provided
+          setTimeout(() => {
+            handleCloseManageModal();
+            setSuccess(null);
+            setLoading(false);
+          }, 1500);
+        } else {
+          // Fallback to local state only
           if (onUpdateIngredient) {
             onUpdateIngredient(editingIngredient.id, {
               name: updates.name,
@@ -171,10 +185,11 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
               costPerUnit: updates.cost_per_unit
             });
           }
-
+          setSuccess(`Successfully updated "${ingredientFormData.name}"`);
           setTimeout(() => {
             handleCloseManageModal();
             setSuccess(null);
+            setLoading(false);
           }, 1500);
         }
       } else {
@@ -189,7 +204,7 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
 
         if (supabase) {
           // Insert into Supabase
-          const { data, error: insertError } = await supabase
+          const { error: insertError } = await supabase
             .from('ingredients')
             .insert([newIngredient])
             .select()
@@ -199,26 +214,16 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
 
           setSuccess(`Successfully added "${ingredientFormData.name}" to inventory`);
 
-          // Refresh data from backend
+          // Refresh data from backend - wait for it to complete
           if (onRefresh) {
-            setTimeout(() => onRefresh(), 500);
-          }
-
-          // Also update local state if callback provided
-          if (onAddIngredient && data) {
-            onAddIngredient({
-              name: data.name,
-              unit: data.unit,
-              stock: data.stock,
-              minStockLevel: data.min_stock_level,
-              costPerUnit: data.cost_per_unit
-            });
+            await onRefresh();
           }
 
           // Close modal after short delay to show success message
           setTimeout(() => {
             handleCloseManageModal();
             setSuccess(null);
+            setLoading(false);
           }, 1500);
         } else {
           // Fallback to local state only
@@ -234,6 +239,7 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
             setTimeout(() => {
               handleCloseManageModal();
               setSuccess(null);
+              setLoading(false);
             }, 1500);
           }
         }
@@ -264,14 +270,9 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
 
         setSuccess(`Successfully deleted "${ingredient.name}"`);
 
-        // Refresh data from backend
+        // Refresh data from backend - wait for it to complete
         if (onRefresh) {
-          setTimeout(() => onRefresh(), 500);
-        }
-
-        // Also update local state if callback provided
-        if (onDeleteIngredient) {
-          onDeleteIngredient(ingredient.id);
+          await onRefresh();
         }
 
         setTimeout(() => {

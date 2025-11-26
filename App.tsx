@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from './components/Layout';
 import POS from './components/POS';
 import Dashboard from './components/Dashboard';
@@ -29,7 +29,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('pos');
-  
+
   // Initialize state from Local Database (localStorage) or fall back to constants
   const [menu, setMenu] = useState<MenuItem[]>(() => {
     try {
@@ -88,6 +88,64 @@ const App: React.FC = () => {
 
     checkAuth();
   }, []);
+
+  // Set up real-time sync from database
+  useEffect(() => {
+    if (!supabase || !currentUser) return;
+
+    // Initial sync on login
+    syncFromDatabase();
+
+    // Set up real-time subscriptions for all tables
+    const ingredientsChannel = supabase
+      .channel('ingredients_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ingredients' },
+        () => {
+          console.log('📦 Ingredients changed in database, syncing...');
+          syncFromDatabase();
+        }
+      )
+      .subscribe();
+
+    const menuChannel = supabase
+      .channel('menu_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'menu_items' },
+        () => {
+          console.log('🍽️ Menu changed in database, syncing...');
+          syncFromDatabase();
+        }
+      )
+      .subscribe();
+
+    const ordersChannel = supabase
+      .channel('orders_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          console.log('📋 Orders changed in database, syncing...');
+          syncFromDatabase();
+        }
+      )
+      .subscribe();
+
+    // Periodic sync every 30 seconds as a backup
+    const syncInterval = setInterval(() => {
+      syncFromDatabase();
+    }, 30000);
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      ingredientsChannel.unsubscribe();
+      menuChannel.unsubscribe();
+      ordersChannel.unsubscribe();
+      clearInterval(syncInterval);
+    };
+  }, [currentUser, supabase]);
 
   // Simplified "One Click" Login for Family usage - now persistent
   const handleLogin = () => {
@@ -199,19 +257,21 @@ const App: React.FC = () => {
     setInventory(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
   };
 
-  const handleRefreshInventory = async () => {
+  // Fetch and sync all data from database
+  const syncFromDatabase = useCallback(async () => {
     if (!supabase) return;
 
     try {
-      const { data, error } = await supabase
+      // Fetch ingredients
+      const { data: ingredientsData, error: ingredientsError } = await supabase
         .from('ingredients')
         .select('*')
         .order('name');
 
-      if (error) throw error;
+      if (ingredientsError) throw ingredientsError;
 
-      if (data) {
-        const formattedInventory: Ingredient[] = data.map(item => ({
+      if (ingredientsData) {
+        const formattedInventory: Ingredient[] = ingredientsData.map(item => ({
           id: item.id,
           name: item.name,
           unit: item.unit,
@@ -219,11 +279,110 @@ const App: React.FC = () => {
           minStockLevel: item.min_stock_level,
           costPerUnit: item.cost_per_unit
         }));
-        setInventory(formattedInventory);
+
+        // Only update if data has changed
+        setInventory(prevInventory => {
+          const currentInventoryStr = JSON.stringify(prevInventory);
+          const newInventoryStr = JSON.stringify(formattedInventory);
+          if (currentInventoryStr !== newInventoryStr) {
+            localStorage.setItem(DB_KEYS.INVENTORY, newInventoryStr);
+            return formattedInventory;
+          }
+          return prevInventory;
+        });
+      }
+
+      // Fetch menu items
+      const { data: menuData, error: menuError } = await supabase
+        .from('menu_items')
+        .select('*')
+        .order('name');
+
+      if (menuError) throw menuError;
+
+      if (menuData) {
+        const formattedMenu: MenuItem[] = menuData.map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          price: item.price,
+          cost: item.cost || (item.price * 0.3), // Default to 30% of price if not set
+          description: item.description || '',
+          ingredients: item.ingredients || [],
+          isReadyMade: item.is_ready_made || false,
+          readyMadeStockId: item.ready_made_stock_id || undefined,
+          image: item.image
+        }));
+
+        // Only update if data has changed
+        setMenu(prevMenu => {
+          const currentMenuStr = JSON.stringify(prevMenu);
+          const newMenuStr = JSON.stringify(formattedMenu);
+          if (currentMenuStr !== newMenuStr) {
+            localStorage.setItem(DB_KEYS.MENU, newMenuStr);
+            return formattedMenu;
+          }
+          return prevMenu;
+        });
+      }
+
+      // Fetch orders with items
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            id,
+            menu_item_id,
+            quantity,
+            price_each
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (ordersError) throw ordersError;
+
+      if (ordersData) {
+        const formattedOrders: Order[] = ordersData.map(order => ({
+          id: order.id,
+          items: order.order_items.map((item: any) => {
+            const menuItem = menuData?.find(m => m.id === item.menu_item_id);
+            return {
+              id: item.menu_item_id,
+              name: menuItem?.name || 'Unknown Item',
+              price: item.price_each,
+              quantity: item.quantity,
+              category: menuItem?.category || 'other'
+            };
+          }),
+          subtotal: order.subtotal,
+          tax: order.tax,
+          discount: order.discount,
+          total: order.total,
+          paymentMethod: order.payment_method,
+          status: order.status,
+          timestamp: order.created_at,
+          cashierName: order.cashier_name
+        }));
+
+        // Only update if data has changed
+        setOrders(prevOrders => {
+          const currentOrdersStr = JSON.stringify(prevOrders);
+          const newOrdersStr = JSON.stringify(formattedOrders);
+          if (currentOrdersStr !== newOrdersStr) {
+            localStorage.setItem(DB_KEYS.ORDERS, newOrdersStr);
+            return formattedOrders;
+          }
+          return prevOrders;
+        });
       }
     } catch (err) {
-      console.error('Error refreshing inventory:', err);
+      console.error('Error syncing from database:', err);
     }
+  }, []);
+
+  const handleRefreshInventory = async () => {
+    await syncFromDatabase();
   };
 
   if (isLoading) {
