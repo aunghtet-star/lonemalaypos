@@ -137,13 +137,9 @@ export const INITIAL_MENU: MenuItem[] = [
 ];
 
 export const INITIAL_VOUCHERS: Voucher[] = [
-  { id: 'v1', code: 'WELCOME10', type: 'PERCENTAGE', value: 10, minSpend: 0, expiryDate: '2025-12-31', isActive: true },
-  { id: 'v2', code: 'LUNCH5000', type: 'FIXED', value: 5000, minSpend: 20000, expiryDate: '2025-12-31', isActive: true },
+
 ];
 
 export const INITIAL_ORDERS: Order[] = [
   // Mock history for charts (Values scaled to Kyat)
-  { id: 'o1', items: [], subtotal: 50000, tax: 0, discount: 0, total: 50000, paymentMethod: 'CASH', status: 'COMPLETED', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), cashierName: 'John Doe' },
-  { id: 'o2', items: [], subtotal: 120000, tax: 0, discount: 10000, total: 110000, paymentMethod: 'CASH', status: 'COMPLETED', createdAt: new Date(Date.now() - 86400000).toISOString(), cashierName: 'John Doe' },
-  { id: 'o3', items: [], subtotal: 80000, tax: 0, discount: 0, total: 80000, paymentMethod: 'KBZ_PAY', status: 'COMPLETED', createdAt: new Date().toISOString(), cashierName: 'Jane Smith' },
 ];
