@@ -91,7 +91,7 @@ export async function fetchInventory() {
   return data as DbIngredient[];
 }
 
-export async function createOrder(order: Omit<DbOrder, 'id' | 'created_at'>, items: Array<Omit<DbOrderItemRef,'id'>>) {
+export async function createOrder(order: Omit<DbOrder, 'id' | 'created_at'>, items: Array<Omit<DbOrderItemRef,'id' | 'order_id'>>) {
   // NOTE: Not atomic. For production wrap in an RPC or Edge Function transaction.
   const { data: orderInserted, error: orderError } = await supabase
     .from('orders')

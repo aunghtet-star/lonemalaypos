@@ -162,7 +162,27 @@ const App: React.FC = () => {
 
   const handleProcessOrder = async (newOrder: Order) => {
     try {
-      // Save to database first
+      // 1. Calculate stock deductions
+      const stockUpdates: Map<string, number> = new Map();
+
+      newOrder.items.forEach(orderItem => {
+        const menuItem = menu.find(m => m.id === orderItem.id);
+        if (menuItem) {
+          // Handle ready-made drinks (direct stock deduction)
+          if (menuItem.isReadyMade && menuItem.readyMadeStockId) {
+            const currentDeduction = stockUpdates.get(menuItem.readyMadeStockId) || 0;
+            stockUpdates.set(menuItem.readyMadeStockId, currentDeduction + orderItem.quantity);
+          } else {
+            // Handle made-to-order items (ingredient-based deduction)
+            menuItem.ingredients.forEach(ingRef => {
+              const currentDeduction = stockUpdates.get(ingRef.ingredientId) || 0;
+              stockUpdates.set(ingRef.ingredientId, currentDeduction + (ingRef.quantity * orderItem.quantity));
+            });
+          }
+        }
+      });
+
+      // 2. Save order to database
       if (supabase) {
         const dbOrder = {
           subtotal: newOrder.subtotal,
@@ -182,53 +202,50 @@ const App: React.FC = () => {
 
         const savedOrder = await createOrder(dbOrder, orderItems);
         console.log('✅ Order saved to database:', savedOrder.id);
+
+        // 3. Update inventory stock in database
+        const stockUpdatePromises = Array.from(stockUpdates.entries()).map(async ([ingredientId, deduction]) => {
+          const ingredient = inventory.find(i => i.id === ingredientId);
+          if (!ingredient) {
+            console.warn(`⚠️ Ingredient ${ingredientId} not found in local inventory`);
+            return;
+          }
+
+          const newStock = Math.max(0, ingredient.stock - deduction);
+
+          const { error } = await supabase
+            .from('ingredients')
+            .update({ stock: newStock })
+            .eq('id', ingredientId);
+
+          if (error) {
+            console.error(`❌ Failed to update stock for ${ingredient.name}:`, error);
+            throw error; // Re-throw to catch in Promise.all
+          } else {
+            console.log(`✅ Updated ${ingredient.name} stock: ${ingredient.stock} → ${newStock} (deducted: ${deduction})`);
+          }
+        });
+
+        await Promise.all(stockUpdatePromises);
+        console.log(`✅ All inventory stock updated in database (${stockUpdatePromises.length} items)`)
+
+        // 4. Trigger sync to refresh all data from database
+        await syncFromDatabase();
+      } else {
+        // Fallback: Update local state only if no database connection
+        const updatedInventory = inventory.map(item => {
+          const deduction = stockUpdates.get(item.id);
+          if (deduction) {
+            return {
+              ...item,
+              stock: Math.max(0, item.stock - deduction)
+            };
+          }
+          return item;
+        });
+        setInventory(updatedInventory);
       }
 
-      // 1. Deduct Stock immutably
-      const updatedInventory = [...inventory];
-
-      newOrder.items.forEach(orderItem => {
-        const menuItem = menu.find(m => m.id === orderItem.id);
-        if (menuItem) {
-          // Handle ready-made drinks (direct stock deduction)
-          if (menuItem.isReadyMade && menuItem.readyMadeStockId) {
-            let invIndex = updatedInventory.findIndex(i => i.id === menuItem.readyMadeStockId);
-
-            // Fallback: Match by name if ID doesn't match
-            if (invIndex === -1) {
-              const nameMap: Record<string, string> = {
-                'Coca-Cola': 'Coca-Cola Can',
-                'Sprite': 'Sprite Can',
-                'Mineral Water': 'Mineral Water Bottle',
-                'Orange Juice': 'Orange Juice Box'
-              };
-              const inventoryName = nameMap[menuItem.name] || menuItem.name;
-              invIndex = updatedInventory.findIndex(i => i.name === inventoryName);
-            }
-
-            if (invIndex !== -1) {
-              updatedInventory[invIndex] = {
-                ...updatedInventory[invIndex],
-                stock: Math.max(0, updatedInventory[invIndex].stock - orderItem.quantity)
-              };
-            }
-          } else {
-            // Handle made-to-order items (ingredient-based deduction)
-            menuItem.ingredients.forEach(ingRef => {
-              const invIndex = updatedInventory.findIndex(i => i.id === ingRef.ingredientId);
-              if (invIndex !== -1) {
-                // Clone the specific inventory item before modifying to ensure React detects the change
-                updatedInventory[invIndex] = {
-                  ...updatedInventory[invIndex],
-                  stock: Math.max(0, updatedInventory[invIndex].stock - (ingRef.quantity * orderItem.quantity))
-                };
-              }
-            });
-          }
-        }
-      });
-
-      setInventory(updatedInventory);
       setOrders(prev => [newOrder, ...prev]);
     } catch (error) {
       console.error('❌ Failed to save order to database:', error);
@@ -352,7 +369,10 @@ const App: React.FC = () => {
               name: menuItem?.name || 'Unknown Item',
               price: item.price_each,
               quantity: item.quantity,
-              category: menuItem?.category || 'other'
+              category: menuItem?.category || 'other',
+              cost: menuItem?.cost || 0,
+              image: menuItem?.image || '',
+              ingredients: menuItem?.ingredients || []
             };
           }),
           subtotal: order.subtotal,
@@ -361,7 +381,7 @@ const App: React.FC = () => {
           total: order.total,
           paymentMethod: order.payment_method,
           status: order.status,
-          timestamp: order.created_at,
+          createdAt: order.created_at,
           cashierName: order.cashier_name
         }));
 
@@ -486,7 +506,7 @@ const App: React.FC = () => {
         </>
       )}
       {activeTab === 'dashboard' && <Dashboard orders={orders} menu={menu} />}
-      {activeTab === 'menu' && <MenuManager menu={menu} setMenu={setMenu} inventory={inventory} />}
+      {activeTab === 'menu' && <MenuManager menu={[...menu].sort((a, b) => a.name.localeCompare(b.name))} setMenu={setMenu} inventory={inventory} />}
       {activeTab === 'inventory' && (
         <Inventory
           ingredients={inventory}
