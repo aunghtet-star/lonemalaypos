@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset POS Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        button {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #dc2626;
+        }
+        button.success {
+            background: #10b981;
+        }
+        button.success:hover {
+            background: #059669;
+        }
+        .info {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .success-msg {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+        .key-list {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .key-item {
+            padding: 5px 0;
+            font-family: monospace;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Clear POS Cache</h1>
+        <p class="subtitle">This will reset all local data and force reload from database</p>
+
+        <div class="info">
+            <strong>📋 Current localStorage keys:</strong>
+            <div id="keyList" class="key-list">
+                <div class="key-item">Checking...</div>
+            </div>
+        </div>
+
+        <button onclick="clearCache()">Clear Cache & Reset Data</button>
+        <button class="success" onclick="goToPOS()">Go to POS (After Clearing)</button>
+
+        <div id="successMsg" class="success-msg">
+            ✅ <strong>Success!</strong> Cache cleared. Click "Go to POS" to see new features!
+        </div>
+
+        <div class="info" style="margin-top: 30px;">
+            <strong>💡 What this does:</strong>
+            <ul>
+                <li>Removes old menu data (pos_db_menu)</li>
+                <li>Removes old inventory data (pos_db_inventory)</li>
+                <li>Removes old orders data (pos_db_orders)</li>
+                <li>Forces app to load fresh data from constants</li>
+                <li>New ready-made drinks will appear!</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Display current keys
+        function updateKeyList() {
+            const keyList = document.getElementById('keyList');
+            const keys = Object.keys(localStorage);
+            const posKeys = keys.filter(k => k.startsWith('pos_db_'));
+
+            if (posKeys.length === 0) {
+                keyList.innerHTML = '<div class="key-item">✅ No cached data found</div>';
+            } else {
+                keyList.innerHTML = posKeys.map(k =>
+                    `<div class="key-item">🔑 ${k}</div>`
+                ).join('');
+            }
+        }
+
+        // Clear cache function
+        function clearCache() {
+            try {
+                // Remove specific POS keys
+                localStorage.removeItem('pos_db_menu');
+                localStorage.removeItem('pos_db_inventory');
+                localStorage.removeItem('pos_db_orders');
+
+                // Show success message
+                document.getElementById('successMsg').style.display = 'block';
+
+                // Update key list
+                updateKeyList();
+
+                console.log('✅ Cache cleared successfully!');
+            } catch (error) {
+                alert('Error clearing cache: ' + error.message);
+            }
+        }
+
+        // Go to POS
+        function goToPOS() {
+            window.location.href = '/';
+        }
+
+        // Initialize
+        updateKeyList();
+    </script>
+</body>
+</html>
+

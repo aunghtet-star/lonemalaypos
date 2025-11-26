@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Order } from '../types';
+import { fetchOrders } from '../services/supabaseClient';
 
 interface OrderHistoryProps {
   orders: Order[];
@@ -8,15 +9,51 @@ interface OrderHistoryProps {
 const OrderHistory: React.FC<OrderHistoryProps> = ({ orders }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [dbOrders, setDbOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const formatCurrency = (amount: number) => `${amount.toLocaleString()} Ks`;
 
+  // Fetch orders from database on component mount
+  useEffect(() => {
+    const loadOrdersFromDatabase = async () => {
+      setLoading(true);
+      try {
+        const remoteOrders = await fetchOrders(100); // Fetch last 100 orders
+        const formattedOrders: Order[] = remoteOrders.map((o: any) => ({
+          id: o.id,
+          items: [], // We'll need to fetch order items separately if needed
+          subtotal: o.subtotal,
+          tax: o.tax,
+          discount: o.discount,
+          total: o.total,
+          paymentMethod: o.payment_method,
+          status: o.status,
+          createdAt: o.created_at,
+          cashierName: o.cashier_name
+        }));
+        setDbOrders(formattedOrders);
+      } catch (error) {
+        console.error('Failed to load orders from database:', error);
+        // Fall back to local orders if database fails
+        setDbOrders(orders);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrdersFromDatabase();
+  }, [orders]);
+
+  // Use database orders if available, otherwise use local orders
+  const allOrders = dbOrders.length > 0 ? dbOrders : orders;
+
   const filteredOrders = useMemo(() => {
-    return orders.filter(o => 
-      o.id.includes(searchTerm) || 
+    return allOrders.filter(o =>
+      o.id.includes(searchTerm) ||
       o.cashierName.toLowerCase().includes(searchTerm.toLowerCase())
     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [orders, searchTerm]);
+  }, [allOrders, searchTerm]);
 
   return (
     <div className="p-4 md:p-8 h-full overflow-y-auto bg-gray-50 pb-20 md:pb-8">
@@ -24,17 +61,31 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({ orders }) => {
        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
          <div>
             <h2 className="text-2xl font-bold text-gray-800">Order History</h2>
-            <p className="text-gray-500 text-sm">View and manage past transactions</p>
+            <p className="text-gray-500 text-sm">
+              View and manage past transactions
+              {dbOrders.length > 0 && <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Database Connected</span>}
+              {loading && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Loading...</span>}
+            </p>
          </div>
-         <div className="relative w-full md:w-64">
-            <i className="bi bi-search absolute left-3 top-2.5 text-gray-400"></i>
-            <input 
-              type="text" 
-              placeholder="Search Order ID..." 
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-            />
+         <div className="flex gap-3">
+           <button
+             onClick={() => window.location.reload()}
+             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors text-sm font-medium flex items-center gap-2"
+             title="Refresh orders from database"
+           >
+             <i className="bi bi-arrow-clockwise"></i>
+             Refresh
+           </button>
+           <div className="relative w-full md:w-64">
+              <i className="bi bi-search absolute left-3 top-2.5 text-gray-400"></i>
+              <input
+                type="text"
+                placeholder="Search Order ID..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 w-full rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              />
+           </div>
          </div>
        </div>
 

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Cache & Force Ready-Made Drinks</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 700px;
+            margin: 50px auto;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 18px 35px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button.secondary {
+            background: #6366f1;
+        }
+        button.secondary:hover {
+            background: #4f46e5;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+        }
+        .status {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+            display: none;
+        }
+        .status.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .info {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .info strong {
+            color: #1e40af;
+            display: block;
+            margin-bottom: 10px;
+        }
+        ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        li {
+            margin: 8px 0;
+            color: #4b5563;
+        }
+        .icon {
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🥤</div>
+        <h1>Fix Ready-Made Drinks</h1>
+        <p class="subtitle">Clear old cache and force reload with ready-made drinks</p>
+
+        <div class="info">
+            <strong>📋 What's Wrong?</strong>
+            <ul>
+                <li>Ready-made drinks are showing but WITHOUT blue badges</li>
+                <li>Stock counters ("X left") are missing</li>
+                <li>Old cached data is being loaded</li>
+            </ul>
+        </div>
+
+        <button onclick="clearAndReload()">
+            🧹 Clear Cache & Reload with Ready-Made Drinks
+        </button>
+
+        <button class="secondary" onclick="goToPOS()">
+            🚀 Go to POS (After Clearing)
+        </button>
+
+        <div id="status" class="status">
+            <strong>✅ Cache Cleared!</strong>
+            <p>Old menu data removed. Click "Go to POS" to see ready-made drinks with blue badges!</p>
+        </div>
+
+        <div class="info" style="margin-top: 30px;">
+            <strong>💡 What This Does:</strong>
+            <ul>
+                <li>Removes <code>pos_db_menu</code> (old menu without ready-made flags)</li>
+                <li>Removes <code>pos_db_inventory</code> (old inventory)</li>
+                <li>Forces app to reload from constants.ts (has ready-made drinks)</li>
+                <li>Blue "🥤 READY" badges will appear</li>
+                <li>Stock counters will show</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function clearAndReload() {
+            try {
+                // Remove old cached data
+                localStorage.removeItem('pos_db_menu');
+                localStorage.removeItem('pos_db_inventory');
+                localStorage.removeItem('pos_db_orders');
+
+                // Show success
+                document.getElementById('status').classList.add('show');
+
+                console.log('✅ Cache cleared successfully!');
+                console.log('Ready-made drinks will now load from constants with proper flags.');
+            } catch (error) {
+                alert('Error clearing cache: ' + error.message);
+            }
+        }
+
+        function goToPOS() {
+            window.location.href = '/';
+        }
+
+        // Check current cache status on load
+        window.onload = function() {
+            const menu = localStorage.getItem('pos_db_menu');
+            if (menu) {
+                try {
+                    const parsed = JSON.parse(menu);
+                    const readyMade = parsed.filter(item => item.isReadyMade);
+                    console.log('Current cached menu items:', parsed.length);
+                    console.log('Ready-made items in cache:', readyMade.length);
+
+                    if (readyMade.length === 0) {
+                        console.log('⚠️ No ready-made items in cache - need to clear!');
+                    }
+                } catch(e) {
+                    console.log('Cache parse error:', e);
+                }
+            } else {
+                console.log('ℹ️ No menu cache found');
+            }
+        };
+    </script>
+</body>
+</html>
+

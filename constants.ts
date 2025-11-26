@@ -8,6 +8,11 @@ export const INITIAL_INGREDIENTS: Ingredient[] = [
   { id: 'i4', name: 'Lettuce', unit: 'g', stock: 5000, minStockLevel: 1000, costPerUnit: 10 },
   { id: 'i5', name: 'Coffee Beans', unit: 'g', stock: 2000, minStockLevel: 500, costPerUnit: 50 },
   { id: 'i6', name: 'Milk', unit: 'ml', stock: 10000, minStockLevel: 2000, costPerUnit: 2 },
+  // Ready-made drinks inventory
+  { id: 'i7', name: 'Coca-Cola Can', unit: 'cans', stock: 50, minStockLevel: 10, costPerUnit: 800 },
+  { id: 'i8', name: 'Sprite Can', unit: 'cans', stock: 50, minStockLevel: 10, costPerUnit: 800 },
+  { id: 'i9', name: 'Mineral Water Bottle', unit: 'bottles', stock: 100, minStockLevel: 20, costPerUnit: 500 },
+  { id: 'i10', name: 'Orange Juice Box', unit: 'boxes', stock: 30, minStockLevel: 5, costPerUnit: 1200 },
 ];
 
 export const INITIAL_MENU: MenuItem[] = [
@@ -48,6 +53,7 @@ export const INITIAL_MENU: MenuItem[] = [
     cost: 1200,
     image: 'https://picsum.photos/200/200?random=3',
     description: 'Steamed milk with espresso.',
+    isReadyMade: false, // Made to order
     ingredients: [
       { ingredientId: 'i5', quantity: 18 },
       { ingredientId: 'i6', quantity: 200 }
@@ -61,6 +67,7 @@ export const INITIAL_MENU: MenuItem[] = [
     cost: 1200,
     image: 'https://picsum.photos/200/200?random=4',
     description: 'Espresso with frothy milk.',
+    isReadyMade: false, // Made to order
     ingredients: [
       { ingredientId: 'i5', quantity: 18 },
       { ingredientId: 'i6', quantity: 150 }
@@ -77,6 +84,55 @@ export const INITIAL_MENU: MenuItem[] = [
     ingredients: [
       { ingredientId: 'i4', quantity: 150 }
     ]
+  },
+  // Ready-made drinks
+  {
+    id: 'm6',
+    name: 'Coca-Cola',
+    category: 'Drinks',
+    price: 1500,
+    cost: 800,
+    image: 'https://picsum.photos/200/200?random=6',
+    description: 'Chilled Coca-Cola can.',
+    isReadyMade: true,
+    readyMadeStockId: 'i7',
+    ingredients: []
+  },
+  {
+    id: 'm7',
+    name: 'Sprite',
+    category: 'Drinks',
+    price: 1500,
+    cost: 800,
+    image: 'https://picsum.photos/200/200?random=7',
+    description: 'Chilled Sprite can.',
+    isReadyMade: true,
+    readyMadeStockId: 'i8',
+    ingredients: []
+  },
+  {
+    id: 'm8',
+    name: 'Mineral Water',
+    category: 'Drinks',
+    price: 1000,
+    cost: 500,
+    image: 'https://picsum.photos/200/200?random=8',
+    description: 'Pure mineral water bottle.',
+    isReadyMade: true,
+    readyMadeStockId: 'i9',
+    ingredients: []
+  },
+  {
+    id: 'm9',
+    name: 'Orange Juice',
+    category: 'Drinks',
+    price: 2500,
+    cost: 1200,
+    image: 'https://picsum.photos/200/200?random=9',
+    description: 'Fresh orange juice box.',
+    isReadyMade: true,
+    readyMadeStockId: 'i10',
+    ingredients: []
   }
 ];
 

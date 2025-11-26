@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { MenuItem, CartItem, Order, Voucher, User } from '../types';
+import { MenuItem, CartItem, Order, Voucher, User, Ingredient } from '../types';
 
 interface POSProps {
   menu: MenuItem[];
+  inventory: Ingredient[];
   onProcessOrder: (order: Order) => void;
   currentUser: User;
 }
 
-const POS: React.FC<POSProps> = ({ menu, onProcessOrder, currentUser }) => {
+const POS: React.FC<POSProps> = ({ menu, inventory, onProcessOrder, currentUser }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,6 +22,47 @@ const POS: React.FC<POSProps> = ({ menu, onProcessOrder, currentUser }) => {
   // Receipt States
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastCompletedOrder, setLastCompletedOrder] = useState<Order | null>(null);
+
+  // Helper to get stock for ready-made items
+  const getStockForItem = (item: MenuItem): number | null => {
+    if (!item.isReadyMade || !item.readyMadeStockId) return null;
+
+    // Try to find by ID first
+    let stockItem = inventory.find(inv => inv.id === item.readyMadeStockId);
+
+    // Fallback: Match by name if ID doesn't match (handles local vs Supabase ID mismatch)
+    if (!stockItem) {
+      // Map common ready-made item names to inventory names
+      const nameMap: Record<string, string> = {
+        'Coca-Cola': 'Coca-Cola Can',
+        'Sprite': 'Sprite Can',
+        'Mineral Water': 'Mineral Water Bottle',
+        'Orange Juice': 'Orange Juice Box'
+      };
+
+      const inventoryName = nameMap[item.name] || item.name;
+      stockItem = inventory.find(inv => inv.name === inventoryName);
+    }
+
+    return stockItem?.stock ?? 0;
+  };
+
+  // Helper to check if item is available
+  const isItemAvailable = (item: MenuItem): boolean => {
+    if (!item.isReadyMade) return true; // Non-ready-made items are always available
+    const stock = getStockForItem(item);
+    return stock !== null && stock > 0;
+  };
+
+  // Helper to get available quantity (considering cart)
+  const getAvailableQuantity = (item: MenuItem): number | null => {
+    if (!item.isReadyMade) return null;
+    const stock = getStockForItem(item);
+    if (stock === null) return null;
+    const cartItem = cart.find(c => c.id === item.id);
+    const cartQty = cartItem?.quantity ?? 0;
+    return stock - cartQty;
+  };
 
   const formatCurrency = (amount: number) => {
     return `${amount.toLocaleString()} Ks`;
@@ -37,9 +79,26 @@ const POS: React.FC<POSProps> = ({ menu, onProcessOrder, currentUser }) => {
   }, [menu, selectedCategory, searchQuery]);
 
   const addToCart = (item: MenuItem) => {
+    // Check stock availability for ready-made items
+    if (item.isReadyMade) {
+      const available = getAvailableQuantity(item);
+      if (available === null || available <= 0) {
+        alert(`Sorry, ${item.name} is out of stock!`);
+        return;
+      }
+    }
+
     setCart(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
+        // Check if we can add more
+        if (item.isReadyMade) {
+          const available = getAvailableQuantity(item);
+          if (available === null || available <= 1) {
+            alert(`Sorry, only ${existing.quantity} ${item.name} available in stock!`);
+            return prev;
+          }
+        }
         return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
       return [...prev, { ...item, quantity: 1 }];
@@ -98,6 +157,8 @@ const POS: React.FC<POSProps> = ({ menu, onProcessOrder, currentUser }) => {
 
   // KBZ Pay Phone Number
   const KBZ_PHONE = "09793143363";
+  const KBZ_NAME = "Nwe Nwe Yee";
+
 
   // Helper for category icons
   const getCategoryIcon = (category: string) => {
@@ -232,29 +293,68 @@ const POS: React.FC<POSProps> = ({ menu, onProcessOrder, currentUser }) => {
         {/* Grid Content */}
         <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50 pb-24 md:pb-6">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-            {filteredMenu.map(item => (
-              <button 
-                key={item.id}
-                onClick={() => addToCart(item)}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 md:p-3 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col group text-left w-full"
-              >
-                <div className="relative aspect-square mb-3 overflow-hidden rounded-xl bg-slate-50 w-full flex items-center justify-center">
-                  {/* Replaced Image with Icon */}
-                  <i className={`bi ${getCategoryIcon(item.category)} text-5xl text-slate-300 group-hover:scale-110 group-hover:text-secondary/50 transition-all duration-300`}></i>
-                  
-                  <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold text-white shadow-lg">
-                    {formatCurrency(item.price)}
-                  </div>
-                  {cart.find(c => c.id === item.id) && (
-                    <div className="absolute top-2 right-2 bg-secondary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md">
-                        {cart.find(c => c.id === item.id)?.quantity}
+            {filteredMenu.map(item => {
+              const stock = getStockForItem(item);
+              const isAvailable = isItemAvailable(item);
+              const availableQty = getAvailableQuantity(item);
+              const isLowStock = item.isReadyMade && stock !== null && stock <= 5;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => addToCart(item)}
+                  disabled={!isAvailable}
+                  className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-2 md:p-3 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col group text-left w-full relative ${
+                    !isAvailable ? 'opacity-50 cursor-not-allowed hover:shadow-sm hover:translate-y-0' : ''
+                  }`}
+                >
+                  <div className="relative aspect-square mb-3 overflow-hidden rounded-xl bg-slate-50 w-full flex items-center justify-center">
+                    {/* Out of Stock Overlay */}
+                    {!isAvailable && (
+                      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-10">
+                        <span className="bg-red-500 text-white px-3 py-1 rounded-lg font-bold text-xs">OUT OF STOCK</span>
+                      </div>
+                    )}
+
+                    {/* Ready-Made Badge */}
+                    {item.isReadyMade && isAvailable && (
+                      <div className="absolute top-2 left-2 z-10">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          isLowStock 
+                            ? 'bg-orange-500 text-white' 
+                            : 'bg-blue-500 text-white'
+                        }`}>
+                          {isLowStock ? '⚠️ LOW' : '🥤 READY'}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Replaced Image with Icon */}
+                    <i className={`bi ${getCategoryIcon(item.category)} text-5xl text-slate-300 group-hover:scale-110 group-hover:text-secondary/50 transition-all duration-300`}></i>
+
+                    <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold text-white shadow-lg">
+                      {formatCurrency(item.price)}
                     </div>
-                  )}
-                </div>
-                <h3 className="font-bold text-gray-800 text-sm mb-1 leading-tight line-clamp-1">{item.name}</h3>
-                <p className="text-xs text-gray-400 line-clamp-1">{item.category}</p>
-              </button>
-            ))}
+                    {cart.find(c => c.id === item.id) && (
+                      <div className="absolute top-2 right-2 bg-secondary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md">
+                          {cart.find(c => c.id === item.id)?.quantity}
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="font-bold text-gray-800 text-sm mb-1 leading-tight line-clamp-1">{item.name}</h3>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-400 line-clamp-1">{item.category}</p>
+                    {item.isReadyMade && stock !== null && isAvailable && (
+                      <span className={`text-[10px] font-bold ${
+                        isLowStock ? 'text-orange-600' : 'text-gray-500'
+                      }`}>
+                        {availableQty} left
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -324,18 +424,41 @@ const POS: React.FC<POSProps> = ({ menu, onProcessOrder, currentUser }) => {
 
             {/* KBZ Pay QR Display */}
             {paymentMethod === 'KBZ_PAY' && (
-              <div className="mb-6 bg-blue-50 border border-blue-100 rounded-2xl p-6 text-center animate-in slide-in-from-top-4 duration-300">
+              <div className="mb-6 bg-blue-50 rounded-2xl p-6 text-center animate-in slide-in-from-top-4 duration-300">
                 <p className="text-blue-800 font-bold mb-3 text-sm uppercase tracking-wide">Scan with KBZ Pay</p>
-                <div className="bg-white p-2 rounded-xl inline-block shadow-sm mb-3">
-                  <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${KBZ_PHONE}`} 
-                    alt="KBZ Pay QR" 
-                    className="w-40 h-40 mix-blend-multiply" 
-                  />
+                <div className="bg-white p-4 rounded-xl inline-block shadow-sm mb-3">
+                  {/* Using your exact KBZ Pay QR image */}
+                  <div className="w-48 h-48 flex items-center justify-center">
+                    <img
+                      src="/kbzpay-qr.png"
+                      alt="KBZ Pay QR"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        // Show error message if image not found
+                        e.currentTarget.style.display = 'none';
+                        const errorDiv = e.currentTarget.parentElement?.querySelector('.qr-error');
+                        if (errorDiv) {
+                          (errorDiv as HTMLElement).style.display = 'flex';
+                        }
+                      }}
+                    />
+                    <div className="qr-error hidden flex-col items-center justify-center text-red-600 p-4" style={{ display: 'none' }}>
+                      <i className="bi bi-exclamation-triangle text-4xl mb-2"></i>
+                      <p className="text-sm font-semibold">QR Code Not Found</p>
+                      <p className="text-xs mt-1">Please add kbzpay-qr.png</p>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex flex-col items-center gap-1">
                     <span className="text-xs text-blue-400 font-medium uppercase">Phone Number</span>
                     <span className="font-mono text-xl font-black text-slate-800 tracking-wider">{KBZ_PHONE}</span>
+                    <span className="text-xs text-gray-500 mt-1">{KBZ_NAME}</span>
+                </div>
+                <div className="mt-4 bg-blue-100 border border-blue-300 rounded-lg p-3">
+                  <p className="text-xs text-blue-900 font-semibold flex items-center justify-center gap-2">
+                    <i className="bi bi-info-circle-fill"></i>
+                    <span>Using your actual KBZ Pay QR code</span>
+                  </p>
                 </div>
               </div>
             )}
@@ -354,7 +477,7 @@ const POS: React.FC<POSProps> = ({ menu, onProcessOrder, currentUser }) => {
       {/* Receipt Modal */}
       {showReceipt && lastCompletedOrder && (
         <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 animate-in fade-in duration-300">
-           <div className="bg-white w-full max-w-[320px] shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-300 print-area">
+           <div className="bg-white w-full max-w-[320px] shadow-2xl overflow-y-auto relative animate-in zoom-in-95 duration-300 print-area max-h-[90vh] print:overflow-visible print:max-h-none">
               {/* Receipt Paper Effect */}
               <div className="bg-white p-6 relative">
                   {/* Serrated Edge Top */}

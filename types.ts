@@ -29,6 +29,8 @@ export interface MenuItem {
   image: string;
   description?: string;
   ingredients: { ingredientId: string; quantity: number }[];
+  isReadyMade?: boolean; // True for ready-made drinks (canned/bottled)
+  readyMadeStockId?: string; // Links to ingredient ID for stock tracking
 }
 
 export interface CartItem extends MenuItem {

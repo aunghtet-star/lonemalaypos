@@ -1,23 +1,46 @@
 {
-  "name": "လုံမလေး",
+  "name": "lonemalaypos",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "backend": "node backend/server.js",
+    "supabase:login": "supabase login",
+    "supabase:init": "supabase init",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status",
+    "supabase:reset": "supabase db reset",
+    "supabase:link": "supabase link",
+    "supabase:push": "supabase db push",
+    "db:setup": "node setup-database.js",
+    "db:migrate": "cat supabase/migrations/0001_init.sql",
+    "db:seed": "node seed-database.js",
+    "db:check": "node setup-helper.js",
+    "test:connection": "node test-connection.js",
+    "fix:tables": "cat FIX_TABLES_ERROR.md"
   },
   "dependencies": {
-    "react": "^19.2.0",
     "@google/genai": "^1.30.0",
-    "react-markdown": "^10.1.0",
+    "@supabase/supabase-js": "^2.84.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.2.0",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.5.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "supabase": "^2.61.2",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
