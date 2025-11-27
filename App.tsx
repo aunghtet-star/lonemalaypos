@@ -466,25 +466,87 @@ const App: React.FC = () => {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="min-h-screen bg-slate-900 dark:bg-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
         
-        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full relative z-10 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-md w-full relative z-10 text-center">
           <div className="w-24 h-24 bg-secondary rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-xl shadow-secondary/20">
             <i className="bi bi-shop text-4xl text-white"></i>
           </div>
-            <h1 className="text-3xl font-black text-slate-800 mb-2">Welcome Back</h1>
-            <p className="text-slate-500 mb-8">Family Restaurant POS System</p>
-            <button onClick={handleLogin} className="w-full py-4 bg-primary text-white rounded-xl font-bold text-lg shadow-lg shadow-primary/30 hover:bg-indigo-600 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
-              <span>Open Register</span>
+          <h1 className="text-3xl font-black text-slate-800 dark:text-gray-100 mb-2">Welcome Back</h1>
+          <p className="text-slate-500 dark:text-gray-400 mb-6">Family Restaurant POS System</p>
+
+          <div className="space-y-3 mb-4">
+            {/* Password Input - NO PLACEHOLDER */}
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={passcode}
+              onChange={e => setPasscode(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleLogin();
+                }
+              }}
+              className="w-full py-3 px-4 bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-gray-200 border border-slate-200 dark:border-gray-600 rounded-xl font-semibold text-center tracking-widest text-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+            />
+
+            {/* Sign In Button */}
+            <button
+              onClick={handleLogin}
+              className="w-full py-4 bg-gradient-to-r from-primary to-indigo-600 text-white rounded-xl font-bold text-lg hover:from-primary/90 hover:to-indigo-600/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+            >
+              <span>Sign In</span>
               <i className="bi bi-arrow-right"></i>
             </button>
-            <p className="mt-6 text-xs text-slate-400">
-              System ready • v1.0.0
-            </p>
+
+            {authError && <p className="text-red-600 dark:text-red-400 text-sm font-medium">{authError}</p>}
+
+            {/* Biometrics Controls - Color Coded */}
+            <div className="mt-6">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold">Biometric Authentication</p>
+              <div className="grid grid-cols-3 gap-2">
+                <button onClick={async () => {
+                  try {
+                    const ok = await registerBiometricCredential();
+                    alert(ok ? '✅ Fingerprint registered successfully!' : '❌ Registration failed');
+                  } catch (e: any) {
+                    alert('⚠️ ' + e.message);
+                  }
+                }} className="py-2.5 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 rounded-lg font-semibold text-xs hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors flex flex-col items-center gap-1">
+                  <i className="bi bi-fingerprint text-base"></i>
+                  <span>Register</span>
+                </button>
+                <button onClick={simulateBiometric} className="py-2.5 bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 rounded-lg font-semibold text-xs hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex flex-col items-center gap-1">
+                  <i className="bi bi-shield-check text-base"></i>
+                  <span>Sign In</span>
+                </button>
+                <button onClick={() => { removeBiometricCredential(); alert('🗑️ Fingerprint removed'); }} className="py-2.5 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg font-semibold text-xs hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors flex flex-col items-center gap-1">
+                  <i className="bi bi-trash text-base"></i>
+                  <span>Remove</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Biometric Quick Sign In (only if already registered) */}
+            {localStorage.getItem('pos_bio_registered') === 'true' && (
+              <button
+                onClick={simulateBiometric}
+                className="w-full mt-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-xl font-semibold text-sm hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/40 dark:hover:to-emerald-900/40 transition-all flex items-center justify-center gap-2"
+              >
+                <i className="bi bi-fingerprint text-xl"></i>
+                <span>Sign In with Fingerprint</span>
+              </button>
+            )}
           </div>
+
+          <p className="mt-6 text-xs text-slate-400 dark:text-gray-500">
+            System ready • v1.0.0
+          </p>
         </div>
+      </div>
     );
   }
 
