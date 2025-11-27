@@ -1,0 +1,15 @@
+{
+}
+  ]
+    {"src": "/favicon.png", "sizes": "512x512", "type": "image/png"}
+    {"src": "/favicon.png", "sizes": "192x192", "type": "image/png"},
+  "icons": [
+  "orientation": "portrait-primary",
+  "theme_color": "#4f46e5",
+  "background_color": "#1e293b",
+  "display": "standalone",
+  "start_url": "/?source=pwa",
+  "description": "Offline-capable restaurant POS system",
+  "short_name": "LonemalayPOS",
+  "name": "Lonemalay POS",
+
