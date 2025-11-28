@@ -299,42 +299,42 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
 
   return (
     <>
-      <div className="p-4 md:p-8 h-full overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-20 md:pb-8">
+      <div className="p-4 md:p-8 h-full overflow-y-auto bg-gray-50 pb-20 md:pb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Inventory</h2>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Track ingredients and supplies</p>
+            <h2 className="text-2xl font-bold text-gray-800">Inventory</h2>
+            <p className="text-gray-500 text-sm">Track ingredients and supplies</p>
           </div>
           <button
             onClick={() => handleOpenManageModal()}
-            className="w-full md:w-auto px-6 py-3 bg-white dark:bg-gray-800 border-2 border-primary text-primary rounded-xl text-sm font-bold hover:bg-primary hover:text-white transition-colors flex items-center justify-center gap-2 active:scale-95"
+            className="w-full md:w-auto px-6 py-3 bg-white border-2 border-primary text-primary rounded-xl text-sm font-bold hover:bg-primary hover:text-white transition-colors flex items-center justify-center gap-2 active:scale-95"
           >
             <i className="bi bi-plus-circle-fill"></i> Add New Ingredient
           </button>
         </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[600px]">
-            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-4 font-semibold text-gray-600 dark:text-gray-300 text-sm">Item Name</th>
-                <th className="px-6 py-4 font-semibold text-gray-600 dark:text-gray-300 text-sm">Stock Level</th>
-                <th className="px-6 py-4 font-semibold text-gray-600 dark:text-gray-300 text-sm">Unit</th>
-                <th className="px-6 py-4 font-semibold text-gray-600 dark:text-gray-300 text-sm">Status</th>
-                <th className="px-6 py-4 font-semibold text-gray-600 dark:text-gray-300 text-sm">Cost/Unit</th>
-                <th className="px-6 py-4 font-semibold text-gray-600 dark:text-gray-300 text-sm text-right">Actions</th>
+                <th className="px-6 py-4 font-semibold text-gray-600 text-sm">Item Name</th>
+                <th className="px-6 py-4 font-semibold text-gray-600 text-sm">Stock Level</th>
+                <th className="px-6 py-4 font-semibold text-gray-600 text-sm">Unit</th>
+                <th className="px-6 py-4 font-semibold text-gray-600 text-sm">Status</th>
+                <th className="px-6 py-4 font-semibold text-gray-600 text-sm">Cost/Unit</th>
+                <th className="px-6 py-4 font-semibold text-gray-600 text-sm text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-100">
               {ingredients.map(ing => {
                 const isLow = ing.stock <= ing.minStockLevel;
                 return (
-                  <tr key={ing.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <td className="px-6 py-4 text-gray-800 dark:text-gray-200 font-medium">{ing.name}</td>
+                  <tr key={ing.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-gray-800 font-medium">{ing.name}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <span className={`font-mono ${isLow ? 'text-red-600 dark:text-red-400 font-bold' : 'text-gray-600 dark:text-gray-300'}`}>
+                        <span className={`font-mono ${isLow ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
                           {ing.stock.toLocaleString()}
                         </span>
                         {isLow && (
@@ -345,21 +345,21 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-sm">{ing.unit}</td>
+                    <td className="px-6 py-4 text-gray-500 text-sm">{ing.unit}</td>
                     <td className="px-6 py-4">
                       {isLow ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-600 dark:bg-red-400"></span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
                           Low Stock
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-600 dark:bg-green-400"></span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-600"></span>
                           Good
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300 text-sm">{ing.costPerUnit.toLocaleString()} Ks</td>
+                    <td className="px-6 py-4 text-gray-600 text-sm">{ing.costPerUnit.toLocaleString()} Ks</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
@@ -530,14 +530,14 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
     {/* Manage Ingredients Modal */}
     {showManageModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleCloseManageModal}>
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-          <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center rounded-t-2xl">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-2xl">
+            <h3 className="text-xl font-bold text-gray-900">
               {editingIngredient ? 'Edit Ingredient' : 'Add New Ingredient'}
             </h3>
             <button
               onClick={handleCloseManageModal}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
             >
               <i className="bi bi-x-lg"></i>
             </button>
@@ -566,7 +566,7 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
 
             {/* Ingredient Name */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Ingredient Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -574,21 +574,21 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
                 required
                 value={ingredientFormData.name}
                 onChange={(e) => setIngredientFormData({ ...ingredientFormData, name: e.target.value })}
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-800 placeholder-gray-400"
                 placeholder="e.g., Tomatoes"
               />
             </div>
 
             {/* Unit */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Unit of Measurement <span className="text-red-500">*</span>
               </label>
               <select
                 required
                 value={ingredientFormData.unit}
                 onChange={(e) => setIngredientFormData({ ...ingredientFormData, unit: e.target.value })}
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-800 dark:text-gray-100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-800"
               >
                 <option value="pcs">Pieces (pcs)</option>
                 <option value="kg">Kilograms (kg)</option>
@@ -602,7 +602,7 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
 
             {/* Initial Stock */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Initial Stock <span className="text-red-500">*</span>
               </label>
               <input
@@ -612,14 +612,14 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
                 step="1"
                 value={ingredientFormData.stock}
                 onChange={(e) => setIngredientFormData({ ...ingredientFormData, stock: e.target.value })}
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-800 dark:text-gray-100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-800"
                 placeholder="0"
               />
             </div>
 
             {/* Minimum Stock Level */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Minimum Stock Level <span className="text-red-500">*</span>
               </label>
               <input
@@ -629,15 +629,15 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
                 step="1"
                 value={ingredientFormData.minStockLevel}
                 onChange={(e) => setIngredientFormData({ ...ingredientFormData, minStockLevel: e.target.value })}
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-800 dark:text-gray-100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-800"
                 placeholder="0"
               />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">You'll be alerted when stock falls below this level</p>
+              <p className="mt-1 text-xs text-gray-500">You'll be alerted when stock falls below this level</p>
             </div>
 
             {/* Cost Per Unit */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Cost Per Unit (Kyats) <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -648,10 +648,10 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
                   step="1"
                   value={ingredientFormData.costPerUnit}
                   onChange={(e) => setIngredientFormData({ ...ingredientFormData, costPerUnit: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-800 dark:text-gray-100"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-800"
                   placeholder="0"
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">Ks</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">Ks</span>
               </div>
             </div>
 
@@ -661,7 +661,7 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
                 type="button"
                 onClick={handleCloseManageModal}
                 disabled={loading}
-                className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -692,10 +692,4 @@ const Inventory: React.FC<InventoryProps> = ({ ingredients, onUpdateStock, onAdd
 };
 
 export default Inventory;
-
-
-
-
-
-
 

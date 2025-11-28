@@ -107,12 +107,16 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, menu, inventory }) => {
     if (!menuItem) return 0;
     if (menuItem.isReadyMade && menuItem.readyMadeStockId) {
       const ing = ingredientMap.get(menuItem.readyMadeStockId);
-      return ing ? ing.costPerUnit : 0;
+      return ing ? ing.costPerUnit : (menuItem.cost || 0);
     }
-    return (menuItem.ingredients || []).reduce((sum, ref) => {
-      const ing = ingredientMap.get(ref.ingredientId);
-      return sum + (ing ? ing.costPerUnit * ref.quantity : 0);
-    }, 0);
+    // For non-ready-made items, fall back to menuItem.cost or ingredient aggregate if ingredient refs exist
+    if ((menuItem.ingredients || []).length > 0) {
+      return (menuItem.ingredients || []).reduce((sum, ref) => {
+        const ing = ingredientMap.get(ref.ingredientId);
+        return sum + (ing ? ing.costPerUnit * ref.quantity : 0);
+      }, 0);
+    }
+    return menuItem.cost || 0;
   };
 
   // Aggregate sales by date based on filtered orders
@@ -164,9 +168,22 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, menu, inventory }) => {
     return data.sort((a, b) => a.sortKey - b.sortKey);
   }, [filteredOrders, filterType, menu]);
 
+  // Compute total revenue & cost & profit using filteredOrders
+  const aggregatedCosts = useMemo(() => {
+    let cost = 0;
+    filteredOrders.forEach(order => {
+      order.items.forEach(it => {
+        const mi = menu.find(m => m.id === it.id);
+        const unitCost = computeUnitCost(mi);
+        cost += unitCost * it.quantity;
+      });
+    });
+    return cost;
+  }, [filteredOrders, menu, ingredientMap]);
   const totalRevenue = filteredOrders.reduce((sum, o) => sum + o.total, 0);
   const totalOrders = filteredOrders.length;
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  const netProfit = totalRevenue - aggregatedCosts;
 
   // Color mapping for categories - Different colors for each category
   const getCategoryColor = (index: number) => {
@@ -189,24 +206,28 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, menu, inventory }) => {
     return Object.keys(categories).map(key => ({ name: key, value: categories[key] }));
   }, [filteredOrders]);
 
-  // Top 20 products by total revenue (desc)
+  // Top 20 products by total revenue with margin
   const topProducts = useMemo(() => {
-    const map = new Map<string, { name: string; totalQty: number; revenue: number }>();
+    const map = new Map<string, { name: string; totalQty: number; revenue: number; cost: number; isReady: boolean }>();
     filteredOrders.forEach(o => {
       o.items.forEach(it => {
         const mi = menu.find(m => m.id === it.id);
         const name = mi?.name || it.name || 'Unknown';
-        const prev = map.get(it.id) || { name, totalQty: 0, revenue: 0 };
+        const unitCost = computeUnitCost(mi);
+        const prev = map.get(it.id) || { name, totalQty: 0, revenue: 0, cost: 0, isReady: !!mi?.isReadyMade };
         prev.totalQty += it.quantity;
         prev.revenue += it.quantity * it.price;
+        // Only accumulate accurate cost for ready-made items. For others use menuItem.cost or unitCost already computed.
+        prev.cost += unitCost * it.quantity;
+        prev.isReady = !!mi?.isReadyMade;
         map.set(it.id, prev);
       });
     });
     return Array.from(map.entries())
-      .map(([id, v]) => ({ id, ...v }))
+      .map(([id, v]) => ({ id, ...v, profit: v.revenue - v.cost, margin: v.revenue > 0 ? ((v.revenue - v.cost) / v.revenue) * 100 : 0 }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 20);
-  }, [filteredOrders, menu]);
+  }, [filteredOrders, menu, ingredientMap]);
 
   return (
     <div className="p-4 md:p-8 h-full overflow-y-auto pb-20 md:pb-8 text-gray-900">
@@ -453,13 +474,14 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, menu, inventory }) => {
             <div className="bg-white border border-gray-100 p-6 rounded-xl shadow-sm">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Net Profit (Est.)</p>
-                  <h3 className="text-2xl font-bold mt-1 text-gray-900">{formatCurrency(Math.max(0, totalRevenue * 0.6))}</h3>
+                  <p className="text-sm font-medium text-gray-500">Net Profit</p>
+                  <h3 className="text-2xl font-bold mt-1 text-gray-900">{formatCurrency(Math.max(0, netProfit))}</h3>
                 </div>
                 <div className="p-2 bg-green-50 text-green-600 rounded-lg">
                   <i className="bi bi-wallet2 text-xl"></i>
                 </div>
               </div>
+              <p className="text-xs font-medium flex items-center text-gray-400">Costs include ready-made actual stock costs</p>
             </div>
           </div>
 
@@ -578,13 +600,16 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, menu, inventory }) => {
               <h3 className="font-bold text-gray-800">Top 20 Products by Total Revenue</h3>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left min-w-[600px]">
+              <table className="w-full text-left min-w-[700px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-4 py-3 font-semibold text-gray-600 text-sm">Rank</th>
                     <th className="px-4 py-3 font-semibold text-gray-600 text-sm">Product Name</th>
                     <th className="px-4 py-3 font-semibold text-gray-600 text-sm text-right">Total Units Sold</th>
                     <th className="px-4 py-3 font-semibold text-gray-600 text-sm text-right">Total Revenue</th>
+                    <th className="px-4 py-3 font-semibold text-gray-600 text-sm text-right">Cost (Ready)</th>
+                    <th className="px-4 py-3 font-semibold text-gray-600 text-sm text-right">Profit</th>
+                    <th className="px-4 py-3 font-semibold text-gray-600 text-sm text-right">Margin %</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -594,11 +619,14 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, menu, inventory }) => {
                       <td className="px-4 py-3 text-sm font-medium text-gray-800">{p.name}</td>
                       <td className="px-4 py-3 text-sm text-right text-gray-700">{p.totalQty}</td>
                       <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">{formatCurrency(p.revenue)}</td>
+                      <td className="px-4 py-3 text-sm text-right text-gray-600">{p.isReady ? formatCurrency(p.cost) : '-'}</td>
+                      <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">{p.isReady ? formatCurrency(p.profit) : '-'}</td>
+                      <td className="px-4 py-3 text-sm text-right text-blue-600">{p.isReady ? p.margin.toFixed(1) + '%' : '-'}</td>
                     </tr>
                   ))}
                   {topProducts.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="text-center py-8 text-gray-400">No sales data available.</td>
+                      <td colSpan={7} className="text-center py-8 text-gray-400">No sales data available.</td>
                     </tr>
                   )}
                 </tbody>

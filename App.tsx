@@ -100,10 +100,11 @@ const App: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       try {
-        const isAuthenticated = localStorage.getItem(DB_KEYS.AUTH);
-        if (isAuthenticated === 'true') {
-          setCurrentUser(FAMILY_USER);
-        }
+        // Always require authentication on app start - no persistence
+        // const isAuthenticated = localStorage.getItem(DB_KEYS.AUTH);
+        // if (isAuthenticated === 'true') {
+        //   setCurrentUser(FAMILY_USER);
+        // }
       } catch (e) {
         console.error('Failed to check authentication', e);
       } finally {
@@ -479,16 +480,14 @@ const App: React.FC = () => {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-slate-900 dark:bg-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Background Pattern */}
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-md w-full relative z-10 text-center">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full relative z-10 text-center">
           <div className="w-24 h-24 bg-secondary rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-xl shadow-secondary/20">
             <i className="bi bi-shop text-4xl text-white"></i>
           </div>
-          <h1 className="text-3xl font-black text-slate-800 dark:text-gray-100 mb-2">Welcome Back</h1>
-          <p className="text-slate-500 dark:text-gray-400 mb-6">Family Restaurant POS System</p>
+          <h1 className="text-3xl font-black text-slate-800 mb-2">Welcome Back</h1>
+          <p className="text-slate-500 mb-6">Family Restaurant POS System</p>
 
           <div className="space-y-3 mb-4">
             {/* Password Input - NO PLACEHOLDER */}
@@ -503,7 +502,7 @@ const App: React.FC = () => {
                   handleLogin();
                 }
               }}
-              className="w-full py-3 px-4 bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-gray-200 border border-slate-200 dark:border-gray-600 rounded-xl font-semibold text-center tracking-widest text-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              className="w-full py-3 px-4 bg-slate-50 text-slate-800 border border-slate-200 rounded-xl font-semibold text-center tracking-widest text-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
             />
 
             {/* Sign In Button */}
@@ -515,10 +514,10 @@ const App: React.FC = () => {
               <i className="bi bi-arrow-right"></i>
             </button>
 
-            {authError && <p className="text-red-600 dark:text-red-400 text-sm font-medium">{authError}</p>}
+            {authError && <p className="text-red-600 text-sm font-medium">{authError}</p>}
           </div>
 
-          <p className="mt-6 text-xs text-slate-400 dark:text-gray-500">
+          <p className="mt-6 text-xs text-slate-400">
             System ready • v1.0.0
           </p>
         </div>
