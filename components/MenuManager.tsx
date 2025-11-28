@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MenuItem, Ingredient } from '../types';
+import { MenuItem, Ingredient, MenuItemVariant } from '../types';
 import { supabase, addMenuItem as remoteAddMenuItem, updateMenuItem as remoteUpdateMenuItem, deleteMenuItem as remoteDeleteMenuItem } from '../services/supabaseClient';
 
 interface MenuManagerProps {
@@ -16,6 +16,8 @@ interface MenuFormData {
   description: string;
   isReadyMade: boolean;
   readyMadeStockId: string;
+  hasVariants: boolean;
+  variants: MenuItemVariant[];
 }
 
 const MenuManager: React.FC<MenuManagerProps> = ({ menu, setMenu, inventory = [] }) => {
@@ -39,7 +41,9 @@ const MenuManager: React.FC<MenuManagerProps> = ({ menu, setMenu, inventory = []
       cost: '',
       description: 'Freshly prepared house special.',
       isReadyMade: false,
-      readyMadeStockId: ''
+      readyMadeStockId: '',
+      hasVariants: false,
+      variants: []
     });
     setEditingItem(null);
   };
@@ -54,7 +58,9 @@ const MenuManager: React.FC<MenuManagerProps> = ({ menu, setMenu, inventory = []
         cost: item.cost.toString(),
         description: item.description || 'Freshly prepared house special.',
         isReadyMade: item.isReadyMade || false,
-        readyMadeStockId: item.readyMadeStockId || ''
+        readyMadeStockId: item.readyMadeStockId || '',
+        hasVariants: item.hasVariants || false,
+        variants: item.variants || []
       });
     } else {
       resetForm();
@@ -85,7 +91,9 @@ const MenuManager: React.FC<MenuManagerProps> = ({ menu, setMenu, inventory = []
                 cost,
                 description: formData.description,
                 isReadyMade: formData.isReadyMade,
-                readyMadeStockId: formData.isReadyMade ? formData.readyMadeStockId : undefined
+                readyMadeStockId: formData.isReadyMade ? formData.readyMadeStockId : undefined,
+                hasVariants: formData.hasVariants,
+                variants: formData.hasVariants ? formData.variants : undefined
               }
             : item
         ));
@@ -98,7 +106,9 @@ const MenuManager: React.FC<MenuManagerProps> = ({ menu, setMenu, inventory = []
             cost,
             description: formData.description,
             is_ready_made: formData.isReadyMade,
-            ready_made_stock_id: formData.isReadyMade ? formData.readyMadeStockId : undefined
+            ready_made_stock_id: formData.isReadyMade ? formData.readyMadeStockId : undefined,
+            has_variants: formData.hasVariants,
+            variants: formData.hasVariants ? JSON.stringify(formData.variants) : null
           });
         }
       } else {
@@ -113,7 +123,9 @@ const MenuManager: React.FC<MenuManagerProps> = ({ menu, setMenu, inventory = []
               image: '',
               description: formData.description,
               is_ready_made: formData.isReadyMade,
-              ready_made_stock_id: formData.isReadyMade ? formData.readyMadeStockId : undefined
+              ready_made_stock_id: formData.isReadyMade ? formData.readyMadeStockId : undefined,
+              has_variants: formData.hasVariants,
+              variants: formData.hasVariants ? JSON.stringify(formData.variants) : null
             });
             const newItem: MenuItem = {
               id: remote.id,
@@ -125,6 +137,8 @@ const MenuManager: React.FC<MenuManagerProps> = ({ menu, setMenu, inventory = []
               description: remote.description,
               isReadyMade: formData.isReadyMade,
               readyMadeStockId: formData.isReadyMade ? formData.readyMadeStockId : undefined,
+              hasVariants: formData.hasVariants,
+              variants: formData.hasVariants ? formData.variants : undefined,
               ingredients: []
             };
             setMenu([...menu, newItem]);
@@ -140,6 +154,8 @@ const MenuManager: React.FC<MenuManagerProps> = ({ menu, setMenu, inventory = []
               description: formData.description,
               isReadyMade: formData.isReadyMade,
               readyMadeStockId: formData.isReadyMade ? formData.readyMadeStockId : undefined,
+              hasVariants: formData.hasVariants,
+              variants: formData.hasVariants ? formData.variants : undefined,
               ingredients: []
             };
             setMenu([...menu, fallback]);
@@ -155,6 +171,8 @@ const MenuManager: React.FC<MenuManagerProps> = ({ menu, setMenu, inventory = []
             description: formData.description,
             isReadyMade: formData.isReadyMade,
             readyMadeStockId: formData.isReadyMade ? formData.readyMadeStockId : undefined,
+            hasVariants: formData.hasVariants,
+            variants: formData.hasVariants ? formData.variants : undefined,
             ingredients: []
           };
           setMenu([...menu, newItem]);
@@ -409,6 +427,119 @@ const MenuManager: React.FC<MenuManagerProps> = ({ menu, setMenu, inventory = []
                 placeholder="Brief description of the dish..."
               />
             </div>
+
+            {/* Variant Support Toggle */}
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.hasVariants}
+                  onChange={(e) => {
+                    const hasVariants = e.target.checked;
+                    setFormData({
+                      ...formData,
+                      hasVariants,
+                      variants: hasVariants ? (formData.variants.length > 0 ? formData.variants : [
+                        { id: 'chicken', name: 'Chicken', priceModifier: 0 },
+                        { id: 'pork', name: 'Pork', priceModifier: 500 },
+                        { id: 'seafood', name: 'Seafood', priceModifier: 1000 }
+                      ]) : []
+                    });
+                  }}
+                  className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                />
+                <div className="ml-3">
+                  <span className="text-sm font-semibold text-gray-800">Has Protein Variants</span>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Enable this for dishes that can be made with different proteins (e.g., Fried Rice with Chicken/Pork/Seafood)
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Variants Configuration */}
+            {formData.hasVariants && (
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-semibold text-gray-800">
+                    Configure Variants
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newVariant: MenuItemVariant = {
+                        id: `variant_${Date.now()}`,
+                        name: 'New Variant',
+                        priceModifier: 0
+                      };
+                      setFormData({
+                        ...formData,
+                        variants: [...formData.variants, newVariant]
+                      });
+                    }}
+                    className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-purple-700 transition-colors"
+                  >
+                    + Add Variant
+                  </button>
+                </div>
+
+                {formData.variants.map((variant, index) => (
+                  <div key={variant.id} className="bg-white rounded-lg p-3 flex gap-3 items-center">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={variant.name}
+                        onChange={(e) => {
+                          const updated = [...formData.variants];
+                          updated[index] = { ...updated[index], name: e.target.value };
+                          setFormData({ ...formData, variants: updated });
+                        }}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                        placeholder="Variant name (e.g., Chicken)"
+                      />
+                    </div>
+                    <div className="w-32">
+                      <input
+                        type="number"
+                        value={variant.priceModifier}
+                        onChange={(e) => {
+                          const updated = [...formData.variants];
+                          updated[index] = { ...updated[index], priceModifier: parseFloat(e.target.value) || 0 };
+                          setFormData({ ...formData, variants: updated });
+                        }}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                        placeholder="Price +"
+                        step="100"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-0.5">Price modifier</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          variants: formData.variants.filter((_, i) => i !== index)
+                        });
+                      }}
+                      className="w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <i className="bi bi-trash"></i>
+                    </button>
+                  </div>
+                ))}
+
+                {formData.variants.length === 0 && (
+                  <p className="text-xs text-gray-500 text-center py-2">
+                    No variants added. Click "+ Add Variant" to create one.
+                  </p>
+                )}
+
+                <p className="text-xs text-purple-700 flex items-start gap-1 mt-2">
+                  <i className="bi bi-info-circle-fill mt-0.5"></i>
+                  <span>Price modifier is added to the base price. Use 0 for no change, positive for increase.</span>
+                </p>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">

@@ -27,10 +27,30 @@ const TABLES = Array.from({ length: 20 }, (_, i) => `Table ${i + 1}`);
 const PARCELS = Array.from({ length: 10 }, (_, i) => `Parcel ${i + 1}`);
 
 const POS: React.FC<POSProps> = ({ menu, inventory, onProcessOrder, currentUser }) => {
+  // Load active orders from localStorage
+  const loadActiveOrders = (): Map<string, ActiveOrder> => {
+    try {
+      const saved = localStorage.getItem('pos_active_orders');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return new Map(Object.entries(parsed));
+      }
+    } catch (error) {
+      console.error('Failed to load active orders:', error);
+    }
+    return new Map();
+  };
+
   // Multi-order management
-  const [activeOrders, setActiveOrders] = useState<Map<string, ActiveOrder>>(new Map());
-  const [currentLocation, setCurrentLocation] = useState<string | null>(null);
+  const [activeOrders, setActiveOrders] = useState<Map<string, ActiveOrder>>(loadActiveOrders);
+  const [currentLocation, setCurrentLocation] = useState<string | null>(() => {
+    return localStorage.getItem('pos_current_location') || null;
+  });
   const [showLocationSelector, setShowLocationSelector] = useState(false);
+
+  // Variant selection
+  const [showVariantModal, setShowVariantModal] = useState(false);
+  const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
 
   // Current cart (derived from active order)
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -45,6 +65,25 @@ const POS: React.FC<POSProps> = ({ menu, inventory, onProcessOrder, currentUser 
   // Receipt States
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastCompletedOrder, setLastCompletedOrder] = useState<Order | null>(null);
+
+  // Save active orders to localStorage whenever they change
+  React.useEffect(() => {
+    try {
+      const ordersObj = Object.fromEntries(activeOrders);
+      localStorage.setItem('pos_active_orders', JSON.stringify(ordersObj));
+    } catch (error) {
+      console.error('Failed to save active orders:', error);
+    }
+  }, [activeOrders]);
+
+  // Save current location to localStorage
+  React.useEffect(() => {
+    if (currentLocation) {
+      localStorage.setItem('pos_current_location', currentLocation);
+    } else {
+      localStorage.removeItem('pos_current_location');
+    }
+  }, [currentLocation]);
 
   // Get current cart from active order
   const cart = currentLocation ? (activeOrders.get(currentLocation)?.cart || []) : [];
@@ -152,9 +191,16 @@ const POS: React.FC<POSProps> = ({ menu, inventory, onProcessOrder, currentUser 
       .sort((a, b) => a.name.localeCompare(b.name)); // Alphabetical order
   }, [menu, selectedCategory, searchQuery]);
 
-  const addToCart = (item: MenuItem) => {
+  const addToCart = (item: MenuItem, variant?: MenuItemVariant) => {
     if (!currentLocation) {
       setShowLocationSelector(true);
+      return;
+    }
+
+    // If item has variants and no variant selected, show variant modal
+    if (item.hasVariants && item.variants && item.variants.length > 0 && !variant) {
+      setSelectedMenuItem(item);
+      setShowVariantModal(true);
       return;
     }
 
@@ -168,7 +214,15 @@ const POS: React.FC<POSProps> = ({ menu, inventory, onProcessOrder, currentUser 
     }
 
     setCart(prev => {
-      const existing = prev.find(i => i.id === item.id);
+      // For variant items, create a unique ID combining item ID and variant ID
+      const cartItemId = variant ? `${item.id}_${variant.id}` : item.id;
+      const existing = prev.find(i => {
+        if (variant) {
+          return i.id === item.id && i.variantId === variant.id;
+        }
+        return i.id === item.id && !i.variantId;
+      });
+
       if (existing) {
         if (item.isReadyMade) {
           const available = getAvailableQuantity(item);
@@ -177,15 +231,40 @@ const POS: React.FC<POSProps> = ({ menu, inventory, onProcessOrder, currentUser 
             return prev;
           }
         }
-        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+        return prev.map(i => {
+          if (variant) {
+            return (i.id === item.id && i.variantId === variant.id)
+              ? { ...i, quantity: i.quantity + 1 }
+              : i;
+          }
+          return (i.id === item.id && !i.variantId)
+            ? { ...i, quantity: i.quantity + 1 }
+            : i;
+        });
       }
-      return [...prev, { ...item, quantity: 1 }];
+
+      // Create new cart item with variant if provided
+      const newCartItem: CartItem = {
+        ...item,
+        quantity: 1,
+        ...(variant && {
+          selectedVariant: variant,
+          variantId: variant.id,
+          price: item.price + variant.priceModifier,
+          name: `${item.name} (${variant.name})` // Show variant in name
+        })
+      };
+
+      return [...prev, newCartItem];
     });
   };
 
-  const updateQuantity = (itemId: string, delta: number) => {
+  const updateQuantity = (cartItemKey: string, delta: number) => {
     setCart(prev => prev.map(item => {
-      if (item.id === itemId) {
+      // Generate the same unique key for this item
+      const itemKey = item.variantId ? `${item.id}_${item.variantId}` : item.id;
+
+      if (itemKey === cartItemKey) {
         return { ...item, quantity: Math.max(0, item.quantity + delta) };
       }
       return item;
@@ -318,34 +397,39 @@ const POS: React.FC<POSProps> = ({ menu, inventory, onProcessOrder, currentUser 
             </p>
           </div>
         ) : (
-          cart.map(item => (
-            <div key={item.id} className="flex gap-3 bg-white p-3 rounded-xl shadow-sm border border-gray-100">
-              <div className="flex-1">
-                <div className="flex justify-between items-start mb-1">
-                  <h4 className="font-bold text-sm text-gray-800 leading-tight">{item.name}</h4>
-                  <span className="font-bold text-sm text-gray-900 ml-2">{formatCurrency(item.price * item.quantity)}</span>
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                   <p className="text-xs text-gray-400">@ {formatCurrency(item.price)}</p>
-                   <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, -1); }}
-                      className="w-7 h-7 rounded-md bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm active:scale-95"
-                    >
-                      <i className="bi bi-dash"></i>
-                    </button>
-                    <span className="text-sm font-bold w-4 text-center tabular-nums">{item.quantity}</span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, 1); }}
-                      className="w-7 h-7 rounded-md bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-green-50 hover:text-green-500 hover:border-green-200 transition-colors shadow-sm active:scale-95"
-                    >
-                      <i className="bi bi-plus"></i>
-                    </button>
+          cart.map(item => {
+            // Create unique key combining item id and variant id if present
+            const cartItemKey = item.variantId ? `${item.id}_${item.variantId}` : item.id;
+
+            return (
+              <div key={cartItemKey} className="flex gap-3 bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className="font-bold text-sm text-gray-800 leading-tight">{item.name}</h4>
+                    <span className="font-bold text-sm text-gray-900 ml-2">{formatCurrency(item.price * item.quantity)}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                     <p className="text-xs text-gray-400">@ {formatCurrency(item.price)}</p>
+                     <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); updateQuantity(cartItemKey, -1); }}
+                        className="w-7 h-7 rounded-md bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm active:scale-95"
+                      >
+                        <i className="bi bi-dash"></i>
+                      </button>
+                      <span className="text-sm font-bold w-4 text-center tabular-nums">{item.quantity}</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); updateQuantity(cartItemKey, 1); }}
+                        className="w-7 h-7 rounded-md bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-green-50 hover:text-green-500 hover:border-green-200 transition-colors shadow-sm active:scale-95"
+                      >
+                        <i className="bi bi-plus"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -502,11 +586,18 @@ const POS: React.FC<POSProps> = ({ menu, inventory, onProcessOrder, currentUser 
                       <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold text-white shadow-lg">
                         {formatCurrency(item.price)}
                       </div>
-                      {cart.find(c => c.id === item.id) && (
-                        <div className="absolute top-2 right-2 bg-secondary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md z-20">
-                            {cart.find(c => c.id === item.id)?.quantity}
-                        </div>
-                      )}
+                      {(() => {
+                        // Calculate total quantity for this item (including all variants)
+                        const totalQuantity = cart
+                          .filter(c => c.id === item.id)
+                          .reduce((sum, c) => sum + c.quantity, 0);
+
+                        return totalQuantity > 0 ? (
+                          <div className="absolute top-2 right-2 bg-secondary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md z-20">
+                            {totalQuantity}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                     <h3 className="font-bold text-gray-800 text-sm mb-1 leading-tight line-clamp-1">{item.name}</h3>
                     <div className="flex items-center justify-between">
@@ -778,6 +869,79 @@ const POS: React.FC<POSProps> = ({ menu, inventory, onProcessOrder, currentUser 
                   </button>
               </div>
            </div>
+        </div>
+      )}
+
+      {/* Variant Selection Modal */}
+      {showVariantModal && selectedMenuItem && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 relative animate-in zoom-in-95 duration-200">
+            <button
+              onClick={() => {
+                setShowVariantModal(false);
+                setSelectedMenuItem(null);
+              }}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200 transition-colors"
+            >
+              <i className="bi bi-x-lg"></i>
+            </button>
+
+            <div className="mb-6">
+              <h2 className="text-2xl font-black text-gray-800 mb-2">Choose Protein</h2>
+              <p className="text-gray-500 text-sm">Select your preferred protein for <span className="font-bold text-gray-700">{selectedMenuItem.name}</span></p>
+            </div>
+
+            <div className="space-y-3 mb-4">
+              {selectedMenuItem.variants?.map((variant) => {
+                const finalPrice = selectedMenuItem.price + variant.priceModifier;
+                const priceChange = variant.priceModifier;
+
+                return (
+                  <button
+                    key={variant.id}
+                    onClick={() => {
+                      addToCart(selectedMenuItem, variant);
+                      setShowVariantModal(false);
+                      setSelectedMenuItem(null);
+                    }}
+                    className="w-full p-4 rounded-xl border-2 border-gray-200 hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-xl">
+                        {variant.name === 'Chicken' && '🐔'}
+                        {variant.name === 'Pork' && '🐷'}
+                        {variant.name === 'Seafood' && '🦐'}
+                        {variant.name === 'Beef' && '🐮'}
+                        {!['Chicken', 'Pork', 'Seafood', 'Beef'].includes(variant.name) && '🍖'}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-800 group-hover:text-primary transition-colors">{variant.name}</h3>
+                        {priceChange !== 0 && (
+                          <p className="text-xs text-gray-500">
+                            {priceChange > 0 ? '+' : ''}{formatCurrency(priceChange)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-gray-900">{formatCurrency(finalPrice)}</p>
+                      <i className="bi bi-arrow-right-circle text-gray-400 group-hover:text-primary transition-colors"></i>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => {
+                setShowVariantModal(false);
+                setSelectedMenuItem(null);
+              }}
+              className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
     </div>

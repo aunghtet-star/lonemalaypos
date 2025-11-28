@@ -61,6 +61,9 @@ function startBackgroundSyncIfEnabled() {
         description: m.description,
         isReadyMade: m.is_ready_made ?? false,
         readyMadeStockId: m.ready_made_stock_id ?? undefined,
+        hasVariants: m.has_variants ?? false,
+        variants: m.variants ? (typeof m.variants === 'string' ? JSON.parse(m.variants) : m.variants) : undefined,
+        basePrice: m.base_price ?? undefined,
         ingredients: []
       }));
 
@@ -77,12 +80,13 @@ function startBackgroundSyncIfEnabled() {
         id: o.id,
         items: (o.items || []).map((item: any) => ({
           id: item.menu_item_id,
-          name: '', // We'll need to populate this from menu data
+          name: item.variant_name ? `${item.name || ''} (${item.variant_name})` : (item.name || ''),
           category: '',
           price: item.price_each,
           cost: 0,
           image: '',
           quantity: item.quantity,
+          variantId: item.variant_id,
           ingredients: []
         })),
         subtotal: o.subtotal,
@@ -92,7 +96,9 @@ function startBackgroundSyncIfEnabled() {
         paymentMethod: o.payment_method,
         status: o.status,
         createdAt: o.created_at,
-        cashierName: o.cashier_name
+        cashierName: o.cashier_name,
+        location: o.location,
+        locationType: o.location_type
       }));
 
       // Update cache silently
@@ -214,6 +220,9 @@ const SupabaseSync: React.FC<SupabaseSyncProps> = ({ onLoad }) => {
           description: m.description,
           isReadyMade: m.is_ready_made ?? false,
           readyMadeStockId: m.ready_made_stock_id ?? undefined,
+          hasVariants: m.has_variants ?? false,
+          variants: m.variants ? (typeof m.variants === 'string' ? JSON.parse(m.variants) : m.variants) : undefined,
+          basePrice: m.base_price ?? undefined,
           ingredients: []
         }));
 
@@ -230,12 +239,13 @@ const SupabaseSync: React.FC<SupabaseSyncProps> = ({ onLoad }) => {
           id: o.id,
           items: (o.items || []).map((item: any) => ({
             id: item.menu_item_id,
-            name: '', // We'll need to populate this from menu data
+            name: item.variant_name ? `${item.name || ''} (${item.variant_name})` : (item.name || ''),
             category: '',
             price: item.price_each,
             cost: 0,
             image: '',
             quantity: item.quantity,
+            variantId: item.variant_id,
             ingredients: []
           })),
           subtotal: o.subtotal,
@@ -245,7 +255,9 @@ const SupabaseSync: React.FC<SupabaseSyncProps> = ({ onLoad }) => {
           paymentMethod: o.payment_method,
           status: o.status,
           createdAt: o.created_at,
-          cashierName: o.cashier_name
+          cashierName: o.cashier_name,
+          location: o.location,
+          locationType: o.location_type
         }));
 
         // Check for local orders to migrate

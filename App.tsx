@@ -342,6 +342,8 @@ const App: React.FC = () => {
           ingredients: item.ingredients || [],
           isReadyMade: item.is_ready_made || false,
           readyMadeStockId: item.ready_made_stock_id || undefined,
+          hasVariants: item.has_variants || false,
+          variants: item.variants ? (typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants) : undefined,
           image: item.image
         }));
 

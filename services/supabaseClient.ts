@@ -43,6 +43,9 @@ export interface DbMenuItem {
   description?: string;
   is_ready_made?: boolean;
   ready_made_stock_id?: string;
+  has_variants?: boolean;
+  variants?: string; // JSON string of MenuItemVariant[]
+  base_price?: number;
   created_at?: string;
 }
 
@@ -52,6 +55,8 @@ export interface DbOrderItemRef { // order items referencing menu items
   menu_item_id: string;
   quantity: number;
   price_each: number; // snapshot price when ordered
+  variant_id?: string;
+  variant_name?: string;
 }
 
 export interface DbOrder {
@@ -63,6 +68,8 @@ export interface DbOrder {
   payment_method: 'CASH' | 'KBZ_PAY';
   status: 'COMPLETED' | 'REFUNDED';
   cashier_name: string;
+  location?: string;
+  location_type?: 'TABLE' | 'PARCEL';
   created_at: string; // timestamptz
 }
 

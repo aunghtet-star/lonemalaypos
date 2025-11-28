@@ -20,6 +20,12 @@ export interface Ingredient {
   costPerUnit: number;
 }
 
+export interface MenuItemVariant {
+  id: string;
+  name: string;
+  priceModifier: number; // Amount to add/subtract from base price
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -31,11 +37,16 @@ export interface MenuItem {
   ingredients: { ingredientId: string; quantity: number }[];
   isReadyMade?: boolean; // True for ready-made drinks (canned/bottled)
   readyMadeStockId?: string; // Links to ingredient ID for stock tracking
+  hasVariants?: boolean; // True if item has protein/size variants
+  variants?: MenuItemVariant[]; // Available variants (e.g., chicken, pork, seafood)
+  basePrice?: number; // Original price before variant modifier
 }
 
 export interface CartItem extends MenuItem {
   quantity: number;
   notes?: string;
+  selectedVariant?: MenuItemVariant; // Selected variant for this cart item
+  variantId?: string; // ID of selected variant
 }
 
 export interface Order {
