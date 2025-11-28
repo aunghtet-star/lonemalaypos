@@ -30,6 +30,10 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('pos');
 
+  // Authentication state
+  const [passcode, setPasscode] = useState('');
+  const [authError, setAuthError] = useState('');
+
   // Initialize state from Local Database (localStorage) or fall back to constants
   const [menu, setMenu] = useState<MenuItem[]>(() => {
     try {
@@ -65,6 +69,27 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem(DB_KEYS.MENU, JSON.stringify(menu)); }, [menu]);
   useEffect(() => { localStorage.setItem(DB_KEYS.INVENTORY, JSON.stringify(inventory)); }, [inventory]);
   useEffect(() => { localStorage.setItem(DB_KEYS.ORDERS, JSON.stringify(orders)); }, [orders]);
+
+  // Authentication Functions
+  const handleLogin = () => {
+    if (passcode === '7777') {
+      localStorage.setItem(DB_KEYS.AUTH, 'true');
+      setCurrentUser(FAMILY_USER);
+      setAuthError('');
+      setPasscode('');
+    } else {
+      setAuthError('❌ Invalid passcode. Please try again.');
+      setPasscode('');
+      // Clear error after 3 seconds
+      setTimeout(() => setAuthError(''), 3000);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem(DB_KEYS.AUTH);
+    setCurrentUser(null);
+    setPasscode('');
+  };
 
   // Check for persistent authentication on mount
   useEffect(() => {
@@ -147,18 +172,6 @@ const App: React.FC = () => {
     };
   }, [currentUser, supabase]);
 
-  // Simplified "One Click" Login for Family usage - now persistent
-  const handleLogin = () => {
-    setCurrentUser(FAMILY_USER);
-    localStorage.setItem(DB_KEYS.AUTH, 'true');
-    setActiveTab('pos');
-  };
-
-  // Logout handler - clears persistent auth
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem(DB_KEYS.AUTH);
-  };
 
   const handleProcessOrder = async (newOrder: Order) => {
     try {
@@ -503,43 +516,6 @@ const App: React.FC = () => {
             </button>
 
             {authError && <p className="text-red-600 dark:text-red-400 text-sm font-medium">{authError}</p>}
-
-            {/* Biometrics Controls - Color Coded */}
-            <div className="mt-6">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold">Biometric Authentication</p>
-              <div className="grid grid-cols-3 gap-2">
-                <button onClick={async () => {
-                  try {
-                    const ok = await registerBiometricCredential();
-                    alert(ok ? '✅ Fingerprint registered successfully!' : '❌ Registration failed');
-                  } catch (e: any) {
-                    alert('⚠️ ' + e.message);
-                  }
-                }} className="py-2.5 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 rounded-lg font-semibold text-xs hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors flex flex-col items-center gap-1">
-                  <i className="bi bi-fingerprint text-base"></i>
-                  <span>Register</span>
-                </button>
-                <button onClick={simulateBiometric} className="py-2.5 bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 rounded-lg font-semibold text-xs hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex flex-col items-center gap-1">
-                  <i className="bi bi-shield-check text-base"></i>
-                  <span>Sign In</span>
-                </button>
-                <button onClick={() => { removeBiometricCredential(); alert('🗑️ Fingerprint removed'); }} className="py-2.5 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg font-semibold text-xs hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors flex flex-col items-center gap-1">
-                  <i className="bi bi-trash text-base"></i>
-                  <span>Remove</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Biometric Quick Sign In (only if already registered) */}
-            {localStorage.getItem('pos_bio_registered') === 'true' && (
-              <button
-                onClick={simulateBiometric}
-                className="w-full mt-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-xl font-semibold text-sm hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/40 dark:hover:to-emerald-900/40 transition-all flex items-center justify-center gap-2"
-              >
-                <i className="bi bi-fingerprint text-xl"></i>
-                <span>Sign In with Fingerprint</span>
-              </button>
-            )}
           </div>
 
           <p className="mt-6 text-xs text-slate-400 dark:text-gray-500">
