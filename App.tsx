@@ -543,7 +543,7 @@ const App: React.FC = () => {
           />
         </>
       )}
-      {activeTab === 'dashboard' && <Dashboard orders={orders} menu={menu} />}
+      {activeTab === 'dashboard' && <Dashboard orders={orders} menu={menu} inventory={inventory} />}
       {activeTab === 'menu' && <MenuManager menu={[...menu].sort((a, b) => a.name.localeCompare(b.name))} setMenu={setMenu} inventory={inventory} />}
       {activeTab === 'inventory' && (
         <Inventory
