@@ -38,14 +38,6 @@ export interface CartItem extends MenuItem {
   notes?: string;
 }
 
-export interface TableOrder {
-  tableNumber: number;
-  tableName: string;
-  cart: CartItem[];
-  startedAt: string;
-  lastUpdated: string;
-}
-
 export interface Order {
   id: string;
   items: CartItem[];
@@ -57,7 +49,16 @@ export interface Order {
   status: 'COMPLETED' | 'REFUNDED';
   createdAt: string; // ISO String
   cashierName: string;
-  tableNumber?: number; // Optional table number for orders
+  location?: string; // e.g., "Table 1", "Parcel 1"
+  locationType?: 'TABLE' | 'PARCEL'; // Type of location
+}
+
+// Active order in progress (not yet completed)
+export interface ActiveOrder {
+  location: string;
+  locationType: 'TABLE' | 'PARCEL';
+  cart: CartItem[];
+  createdAt: string;
 }
 
 export interface Voucher {

@@ -178,9 +178,9 @@ const MenuManager: React.FC<MenuManagerProps> = ({ menu, setMenu, inventory = []
 
   // Helper for category icons
   const getCategoryIcon = (category: string) => {
-    if (category.toLowerCase().includes('drink') || category.toLowerCase().includes('coffee')) return 'bi-cup-hot';
-    if (category.toLowerCase().includes('burger') || category.toLowerCase().includes('food')) return 'bi-egg-fried';
-    if (category.toLowerCase().includes('salad') || category.toLowerCase().includes('veg')) return 'bi-flower1';
+    if (category.toLowerCase().includes('drink') || category.toLowerCase().includes('coffee') || category.includes('ဖျော်ရည်')) return 'bi-cup-hot';
+    if (category.toLowerCase().includes('snack')) return 'bi-basket';
+    if (category.includes('တရုတ်') || category.includes('အထောင်း') || category.includes('အသုပ်') || category.includes('ရခိုင်') || category.includes('ဟင်းရည်')) return 'bi-egg-fried';
     return 'bi-basket';
   };
 
